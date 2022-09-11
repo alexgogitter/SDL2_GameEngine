@@ -3,13 +3,13 @@
 #and may not be redistributed without written permission.
 
 #OBJS specifies which files to compile as part of the project
-OBJS = src\main.cpp
+OBJS = src\main.cpp src\glad.c
 
 #CC specifies which compiler we're using
 CC = g++
 
 #INCLUDE_PATHS specifies the additional include paths we'll need -IC:\mingw_dev_lib\include\SDL2
-INCLUDE_PATHS = -IDependencies\GLFW\include
+INCLUDE_PATHS = -IDependencies\GLFW\include -IDependencies
 
 #LIBRARY_PATHS specifies the additional library paths we'll need -LC:\mingw_dev_lib\lib
 LIBRARY_PATHS =  -LDependencies\GLFW\bin
@@ -17,7 +17,7 @@ LIBRARY_PATHS =  -LDependencies\GLFW\bin
 #COMPILER_FLAGS specifies the additional compilation options we're using
 # -w suppresses all warnings
 # -Wl,-subsystem,windows gets rid of the console window
-COMPILER_FLAGS = -w #-Wl,-subsystem,windows
+COMPILER_FLAGS = -w -g#-Wl,-subsystem,windows
 
 #LINKER_FLAGS specifies the libraries we're linking against
 LINKER_FLAGS =  -lmingw32 -lglfw3dll -lopengl32

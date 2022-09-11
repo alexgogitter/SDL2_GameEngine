@@ -161,4 +161,4 @@ public:
 	}
 };
 
-#endif SHADER_H
+#endif //SHADER_H
