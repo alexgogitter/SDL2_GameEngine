@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <string>
 
 //#include <vector>
 
@@ -41,11 +42,11 @@ public:
 	float MouseSensitivity;
 	float Zoom;
 
-	std::string GetPositionCoords(void) {
-		std::stringstream s;
-		s << "[" << Position.x << "," << Position.y << "," << Position.z << "]";
-		return s.str();
-	}
+	// std::string GetPositionCoords(void) {
+	// 	std::stringstream s;
+	// 	s << "[" << Position.x << "," << Position.y << "," << Position.z << "]";
+	// 	return s.str();
+	// }
 
 	// Constructor init list is used as it can define them based on the constructor used and putting the 
 	// assigmnets in the constructor body is twice the work
