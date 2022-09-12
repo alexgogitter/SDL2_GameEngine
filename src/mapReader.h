@@ -3,6 +3,7 @@
 
 #include "stb_image.h"
 #include <iostream>
+#include <vector>
 
 struct colorVals {
 	unsigned char r;

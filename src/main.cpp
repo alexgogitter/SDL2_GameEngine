@@ -8,6 +8,7 @@
 
 #include "shader.h"
 #include "camera.h"
+#include "mapReader.h"
 
 // Prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -19,6 +20,10 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 const unsigned int WINDOW_WIDTH = 800;
 const unsigned int WINDOW_HEIGHT = 600;
 const char* windowTitle = "Space Game";
+
+std::string mapName  ="map2.png";
+
+std::string shaderPath = "../res/shader/";
 
 // Frames
 float deltaTime = 0.0f; // Time between current frame and last frame
@@ -38,7 +43,7 @@ int main(){
 	// Initalise GLFW for the window
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); // Spec what the window should have
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1); // Setting to version 4.6
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6); // Setting to version 4.6
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // MACOSX
@@ -65,7 +70,37 @@ int main(){
 	// Telling open gl that we wanth the resize callback funtion to be called on window when its resized
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-	gladLoadGL();
+	// Hide cursor and capture its input
+	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetCursorPosCallback(window, mouse_callback);
+	//glfwSetScrollCallback(window, scroll_callback);
+
+	// Initalise GLAD
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+
+	float positions[] = {
+		-50.0f, -50.0f, //0.0f, 0.0f
+		 50.0f, -50.0f, //1.0f, 0.0f,
+		 50.0f,  50.0f, //1.0f, 0.0f,
+		-50.0f,  50.0f // 0.0f, 1.0f
+	};
+
+	unsigned int indices[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	Shader shader1((shaderPath += "shader1.vert").c_str(), (shaderPath += "shader1.frag").c_str());
+
+
+
 
 
 	// Render loop to keep rendering until the program is closed
