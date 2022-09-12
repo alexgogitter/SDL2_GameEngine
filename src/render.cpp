@@ -1,5 +1,5 @@
 #include "render.h"
-
+#include <string>
 
 Renderer::Renderer(int s_w, int s_h, int fc, int i_f, const char* title)
 {
@@ -51,6 +51,8 @@ int Renderer::Renderer_Init()
     //return 0 on success of Init, else return NOTZERO.
     int status=0;
     gWindow = SDL_CreateWindow(this->sTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_HEIGHT, SCREEN_WIDTH, SDL_WINDOW_SHOWN);
+    // Sets wether the window is resizeable
+    SDL_SetWindowResizable(gWindow, SDL_TRUE);
     if(gWindow==NULL)
     {
         printf( "Window could not be created! SDL_ERROR: %s\n", SDL_GetError() );
@@ -95,4 +97,23 @@ void Renderer::Renderer_Draw(Object* o)
     SDL_RenderPresent(gRenderer);
 }
 
+void Renderer::Renderer_ttf(std::string text, std::string font, int size, SDL_Color &textColor){
+
+    // printf(("../res/fonts/"+font).c_str());
+
+    TTF_Font* Sans = TTF_OpenFont(("../res/fonts/"+font).c_str(), size);
+    
+
+    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, text.c_str(), textColor);
+
+    SDL_Texture* Message = SDL_CreateTextureFromSurface(this->gRenderer, surfaceMessage);
+
+    SDL_Rect TextContainer = {400,400,100,100};
+
+    SDL_RenderCopy(this->gRenderer, Message, NULL, &TextContainer);
+
+    // Free resorces
+    SDL_FreeSurface(surfaceMessage);
+    SDL_DestroyTexture(Message);
+}
 

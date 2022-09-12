@@ -1,5 +1,6 @@
 #include "object.h"
 #include <SDL_ttf.h>
+#include <string>
 
 
 
@@ -32,5 +33,7 @@ public:
     SDL_Renderer* get_SDLRenderer(){return gRenderer;}
 
     void Renderer_PresentFrame(){SDL_RenderPresent(gRenderer);}
+
+    void Renderer_ttf(std::string text, std::string font, int size, SDL_Color &textColor);
 
 };
