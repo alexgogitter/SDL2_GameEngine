@@ -34,6 +34,8 @@ colorVals CVpath = { 0, 0, 255, 1 };
 
 class mapReader {
 private:
+	// Doesnt work
+
 	// These arent needed here
 	// Just a test to see how static variables are dealt with in this
 	static int width, height, n;
