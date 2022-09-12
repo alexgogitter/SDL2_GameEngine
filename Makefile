@@ -3,7 +3,7 @@
 #and may not be redistributed without written permission.
 
 #OBJS specifies which files to compile as part of the project
-OBJS = src/main.cpp src/stb_image.cpp
+OBJS = src/main.cpp src/globals.cpp src/render.cpp
 
 #CC specifies which compiler we're using
 CC = i686-w64-mingw32-g++.exe
