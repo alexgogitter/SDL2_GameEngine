@@ -1,4 +1,6 @@
 #include "object.h"
+#include "scene.h"
+
 #include <SDL_ttf.h>
 
 
