@@ -4,11 +4,13 @@
 
 #include "mapReader.h"
 #include "render.h"
+#include "resource_manager.h"
 
 //Simple game design follows a Input -> Update -> draw Loop when running
 
 
 int mapReader::width, mapReader::height, mapReader::n;
+
 
 int main( int argc, char* argv[] )
 {
@@ -16,7 +18,11 @@ int main( int argc, char* argv[] )
     Renderer r = Renderer(600, 900, 60, IMG_INIT_PNG, "Test Render Window");
     r.Renderer_Init();
     SDL_RenderClear(r.get_SDLRenderer());
-    
+
+    Resource_manager manager(r.get_SDLRenderer());
+    manager.loadTexture("res/textures/test/test_tileset1.png");
+
+
     //Main loop flag
     bool quit = false;
 

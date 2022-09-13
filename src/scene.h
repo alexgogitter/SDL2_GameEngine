@@ -14,7 +14,7 @@ class scene{
     private:
 
         std::vector<std::vector<tile>> tile_map;
-        unsigned int tileSurface;
+        int tileTexture;
 
     public:
 

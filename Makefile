@@ -1,7 +1,3 @@
-#Copyright Notice:
-#The files within this zip file are copyrighted by Lazy Foo' Productions (2004-2014)
-#and may not be redistributed without written permission.
-
 #CC specifies which compiler we're using
 CC = i686-w64-mingw32-g++.exe
 # CC = x86_64-w64-mingw32-g++.exe
