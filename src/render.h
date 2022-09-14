@@ -34,6 +34,6 @@ public:
 
     void Renderer_PresentFrame(){SDL_RenderPresent(gRenderer);}
 
-    void Renderer_ttf(std::string text, std::string font, int size, SDL_Color &textColor);
+    void Renderer_ttf(std::string _text, TTF_Font* _font, SDL_Rect *_src, SDL_Rect *_dest, SDL_Color &_textColor);
 
 };

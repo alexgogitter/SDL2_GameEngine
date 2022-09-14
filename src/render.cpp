@@ -35,15 +35,13 @@ Renderer::Renderer(int s_w, int s_h, int fc, int i_f, const char* title)
 
 Renderer::~Renderer()
 {
-
     gWindow = NULL;
     gRenderer = NULL;
     camera=NULL;
 
-    IMG_Quit;
-    TTF_Quit;
-    SDL_Quit;
-
+    IMG_Quit();
+    TTF_Quit();
+    SDL_Quit();
 }
 
 int Renderer::Renderer_Init()
@@ -61,7 +59,7 @@ int Renderer::Renderer_Init()
     else
     {
         //Create Renderer for window
-        gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
+        gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED );
         if( gRenderer == NULL )
         {
             printf( "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -97,20 +95,20 @@ void Renderer::Renderer_Draw(Object* o)
     SDL_RenderPresent(gRenderer);
 }
 
-void Renderer::Renderer_ttf(std::string text, std::string font, int size, SDL_Color &textColor){
+// _text : string to show; font if path to font; _src section of texture; _dest where and how to display; textcolor - self explanitory
+void Renderer::Renderer_ttf(std::string _text, TTF_Font* _font, SDL_Rect *_src, SDL_Rect *_dest, SDL_Color &_textColor){
 
-    // printf(("../res/fonts/"+font).c_str());
+    if (_font == NULL){
+        fprintf(stderr, "FONT NOT LOADED Renderer::Renderer_ttf %s\n", TTF_GetError());
+    }
 
-    TTF_Font* Sans = TTF_OpenFont(("../res/fonts/"+font).c_str(), size);
-    
-
-    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, text.c_str(), textColor);
+    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(_font, _text.c_str(), _textColor);
 
     SDL_Texture* Message = SDL_CreateTextureFromSurface(this->gRenderer, surfaceMessage);
 
-    SDL_Rect TextContainer = {400,400,100,100};
+    SDL_Rect TextContainer = {0,0,100,50};
 
-    SDL_RenderCopy(this->gRenderer, Message, NULL, &TextContainer);
+    SDL_RenderCopy(this->gRenderer, Message, _src, _dest);
 
     // Free resorces
     SDL_FreeSurface(surfaceMessage);

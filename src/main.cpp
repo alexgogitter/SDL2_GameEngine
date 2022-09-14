@@ -5,7 +5,8 @@
 #include <math.h>
 
 #include "mapReader.h"
-#include "render.h"
+// #include "render.h"
+#include "fpsCounter.h"
 
 //Simple game design follows a Input -> Update -> draw Loop when running
 
@@ -17,17 +18,24 @@ std::vector<std::vector<colorVals>> map;
 int mapWidth, mapHeight;
 std::string mapName = "res/maps/Map2.png";
 
-const int tileSize = 20;
-const int mapStartX = 1, mapStartY = 1;
+const int tileSize = 5;
+const int mapStartX = 0, mapStartY = 0;
+
+
+TTF_Font* Sans;
+
 
 // Time constants
 Uint64 deltaTime = 0;
 Uint64 lastFrame = 0;
 
-
+int fpsMSTotal = 0;
+int fpsCount = 0;
+float fps;
 
 int main( int argc, char* argv[] )
 {
+
     
 	mapReader::Reader(map, mapWidth, mapHeight, mapName);
 
@@ -35,9 +43,9 @@ int main( int argc, char* argv[] )
 
 
 
+
     Renderer r = Renderer(1000, 1000, 60, IMG_INIT_PNG, "Test Render Window");
     r.Renderer_Init();
-    SDL_RenderClear(r.get_SDLRenderer());
     
     //Main loop flag
     bool quit = false;
@@ -45,14 +53,58 @@ int main( int argc, char* argv[] )
     //Event handler
     SDL_Event e;
 
+
+	SDL_Surface* surface = IMG_Load(mapName.c_str());
+	if (surface == nullptr){
+		fprintf(stderr, "Surface Load Error");
+	}
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(r.get_SDLRenderer(), surface);
+	if (texture == nullptr){
+		fprintf(stderr, "Texture Load Error");
+	}
+	SDL_FreeSurface(surface);
+
+	SDL_Rect* rectTest1 = new SDL_Rect{0,0,100,50};
+	// rectTest->x = 100;
+	// rectTest->y = 100;
+	// rectTest->w = 400;
+	// rectTest->h = 100;
+
+
+
+	TTF_Font* Sans = TTF_OpenFont("res/fonts/comicz.ttf", 8);
+	// TTF_CloseFont(Sans);
+
+	SDL_Color* GREEN = new SDL_Color{0, 128, 47, 255};
+	
+
+	fpsCounter fpsc = fpsCounter(Sans, NULL, rectTest1, GREEN);
+
+
+	SDL_Rect* rectTest2 = new SDL_Rect{100,100,400,100};
+
     //While application is running
     while( !quit )
     {  
+		SDL_RenderClear(r.get_SDLRenderer());
+
+
+
+
+
 
 		Uint64 currentFrame = SDL_GetTicks64();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+
+		if (SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, rectTest2) != 0){
+			fprintf(stderr, "RenderCopyError: %s", SDL_GetError());
+		}
+		// SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, &rectTest);
+		// SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, NULL);
+
+		// SDL_RenderCopy(r.get_SDLRenderer(), texture, &rectTest, NULL);
 
 
 
@@ -67,42 +119,56 @@ int main( int argc, char* argv[] )
             }
         }
 
-        SDL_RenderClear(r.get_SDLRenderer());
 
 
-		
-
-		// Rendering map
-		for (int i = 0; i < map.size(); i++) {
-			for (int j = 0; j < map[0].size(); j++) {
+		// Rendering map // SLOW AS FUCK
+		// for (int i = 0; i < map.size(); i++) {
+		// 	for (int j = 0; j < map[0].size(); j++) {
 				
-				SDL_Rect rect1;
-				rect1.y = mapStartY+i*tileSize; rect1.x = mapStartX+j*tileSize; 
-				rect1.w = tileSize;
-				rect1.h = tileSize;
+		// 		SDL_Rect rect1;
+		// 		rect1.y = mapStartY+i*tileSize; rect1.x = mapStartX+j*tileSize; 
+		// 		rect1.w = tileSize;
+		// 		rect1.h = tileSize;
 
-				SDL_SetRenderDrawColor(r.get_SDLRenderer(), map[i][j].r, map[i][j].g, map[i][j].b, 255);
-				SDL_RenderDrawRect(r.get_SDLRenderer(), &rect1);
-				SDL_RenderFillRect(r.get_SDLRenderer(), &rect1);
+		// 		SDL_SetRenderDrawColor(r.get_SDLRenderer(), map[i][j].r, map[i][j].g, map[i][j].b, 255);
+		// 		SDL_RenderDrawRect(r.get_SDLRenderer(), &rect1);
+		// 		SDL_RenderFillRect(r.get_SDLRenderer(), &rect1);
+		// 	}
+		// }
 
 
-			}
+
+
+
+
+		// std::cout << fpsCount << std::endl;
+		if (fpsCount == 100){
+			std::cout << "FPSMSTOTAL: [" << fpsMSTotal << "] FPS: " << fps << std::endl;
+			
+			fps = (1000.0f / ((float)(fpsMSTotal) / 100));
+			// std::cout << (fpsMSTotal) / 1000.0f << std::endl;
+			fpsCount = 0; fpsMSTotal = 0;
 		}
+		fpsCount += 1;
+		fpsMSTotal += deltaTime;
+		// std::cout << fps << std::endl;
+
 
 		std::ostringstream oss;
-		oss << deltaTime;
+		oss << floor(fps);
 
-		SDL_Color GREEN = {0, 255, 50, 255};
-		// r.Renderer_ttf(oss.str(), static_cast<std::string>("comicz.ttf"), 24, GREEN);
-		r.Renderer_ttf("HELLO!!!", static_cast<std::string>("comicz.ttf"), static_cast<int>(sin(SDL_GetTicks64())), GREEN);
+		// r.Renderer_ttf(oss.str(), static_cast<std::string>("Pissjar Sans.ttf"), 24, GREEN);
+		
+		fpsc.update(&r, oss.str());
+
+
+
 
 
 		SDL_SetRenderDrawColor(r.get_SDLRenderer(), 200, 200, 200, 255);
 
-
-
-
-
+		// SDL_Rect fpsRect = {50,50, 100, 100};
+		// r.Renderer_ttf(oss.str(), Sans, NULL, &fpsRect, GREEN);
 
         SDL_RenderPresent(r.get_SDLRenderer());
 
