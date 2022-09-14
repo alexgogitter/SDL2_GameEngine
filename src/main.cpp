@@ -11,18 +11,16 @@
 //Simple game design follows a Input -> Update -> draw Loop when running
 
 
-
 int mapReader::width, mapReader::height, mapReader::n;
 
 std::vector<std::vector<colorVals>> map;
 int mapWidth, mapHeight;
 std::string mapName = "res/maps/Map2.png";
+std::string fontPath = "res/fonts/comicz.ttf";
 
 const int tileSize = 5;
 const int mapStartX = 0, mapStartY = 0;
 
-
-TTF_Font* Sans;
 
 
 // Time constants
@@ -43,7 +41,6 @@ int main( int argc, char* argv[] )
 
 
 
-
     Renderer r = Renderer(1000, 1000, 60, IMG_INIT_PNG, "Test Render Window");
     r.Renderer_Init();
     
@@ -53,7 +50,7 @@ int main( int argc, char* argv[] )
     //Event handler
     SDL_Event e;
 
-
+	// Map rendering
 	SDL_Surface* surface = IMG_Load(mapName.c_str());
 	if (surface == nullptr){
 		fprintf(stderr, "Surface Load Error");
@@ -63,50 +60,24 @@ int main( int argc, char* argv[] )
 		fprintf(stderr, "Texture Load Error");
 	}
 	SDL_FreeSurface(surface);
-
-	SDL_Rect* rectTest1 = new SDL_Rect{0,0,100,50};
-	// rectTest->x = 100;
-	// rectTest->y = 100;
-	// rectTest->w = 400;
-	// rectTest->h = 100;
-
-
-
-	TTF_Font* Sans = TTF_OpenFont("res/fonts/comicz.ttf", 8);
-	// TTF_CloseFont(Sans);
-
-	SDL_Color* GREEN = new SDL_Color{0, 128, 47, 255};
 	
+	fpsCounter fpsCountObj = fpsCounter();
 
-	fpsCounter fpsc = fpsCounter(Sans, NULL, rectTest1, GREEN);
-
-
-	SDL_Rect* rectTest2 = new SDL_Rect{100,100,400,100};
+	SDL_Rect* mapRect = new SDL_Rect{100,100,400,100};
 
     //While application is running
     while( !quit )
     {  
 		SDL_RenderClear(r.get_SDLRenderer());
 
-
-
-
-
-
 		Uint64 currentFrame = SDL_GetTicks64();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
 
-		if (SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, rectTest2) != 0){
+		if (SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, mapRect) != 0){
 			fprintf(stderr, "RenderCopyError: %s", SDL_GetError());
 		}
-		// SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, &rectTest);
-		// SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, NULL);
-
-		// SDL_RenderCopy(r.get_SDLRenderer(), texture, &rectTest, NULL);
-
-
 
         //Handle events on queue
         while( SDL_PollEvent( &e ) != 0 )
@@ -137,10 +108,6 @@ int main( int argc, char* argv[] )
 		// }
 
 
-
-
-
-
 		// std::cout << fpsCount << std::endl;
 		if (fpsCount == 100){
 			std::cout << "FPSMSTOTAL: [" << fpsMSTotal << "] FPS: " << fps << std::endl;
@@ -151,27 +118,17 @@ int main( int argc, char* argv[] )
 		}
 		fpsCount += 1;
 		fpsMSTotal += deltaTime;
-		// std::cout << fps << std::endl;
+
 
 
 		std::ostringstream oss;
 		oss << floor(fps);
 
-		// r.Renderer_ttf(oss.str(), static_cast<std::string>("Pissjar Sans.ttf"), 24, GREEN);
-		
-		fpsc.update(&r, oss.str());
-
-
-
+		fpsCountObj.update(&r, oss.str());
 
 
 		SDL_SetRenderDrawColor(r.get_SDLRenderer(), 200, 200, 200, 255);
-
-		// SDL_Rect fpsRect = {50,50, 100, 100};
-		// r.Renderer_ttf(oss.str(), Sans, NULL, &fpsRect, GREEN);
-
         SDL_RenderPresent(r.get_SDLRenderer());
-
     }
 
     /*need to work with a basic input -> update -> render System*/
