@@ -14,9 +14,9 @@ class Resource_manager
         //index of file paths will match the index of the resource's pointer
         //if the requested path has no resource at the specified ID, it will reload that file.
         
-        int numberOfTextures = 0, numberOfFonts = 0;
+        unsigned int numberOfTextures, numberOfFonts;
 
-        SDL_Renderer* gRenderer=NULL;
+        SDL_Renderer* gRenderer;
 
         std::vector<SDL_Texture*> textures;
         std::vector<const char*> texture_paths;
@@ -32,18 +32,18 @@ class Resource_manager
         
         //Texture Operations
 
-        int loadTexture(const char * f_path);
+        unsigned int loadTexture(const char * f_path);
         
-        SDL_Texture* getTexture(int texture_ID);
+        SDL_Texture* getTexture(unsigned int texture_ID);
 
-        void deleteTexture(int texture_ID);
+        void deleteTexture(unsigned int texture_ID);
 
         //Font Operations
 
         int loadFont(const char * f_path);
 
-        TTF_Font* getFont(int font_ID);
+        TTF_Font* getFont(unsigned int font_ID);
 
-        void deleteFont(int font_ID);
+        void deleteFont(unsigned int font_ID);
 
 };

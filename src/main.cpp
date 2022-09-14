@@ -20,7 +20,8 @@ int main( int argc, char* argv[] )
     SDL_RenderClear(r.get_SDLRenderer());
 
     Resource_manager manager(r.get_SDLRenderer());
-    manager.loadTexture("res/textures/test/test_tileset1.png");
+    int test_tile=manager.loadTexture("res/textures/test/test_tileset1.png");
+    Object o = Object(test_tile, 32, 32, manager);
 
 
     //Main loop flag
@@ -44,6 +45,8 @@ int main( int argc, char* argv[] )
         }
         
         SDL_RenderClear(r.get_SDLRenderer());
+
+        o.draw(r.get_SDLRenderer());
 
         SDL_RenderPresent(r.get_SDLRenderer());
 

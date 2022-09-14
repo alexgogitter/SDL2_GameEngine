@@ -15,7 +15,7 @@ LIBRARY_PATHS =  -Ldependencies/lib
 PATHS=$(LIBRARY_PATHS) $(INCLUDE_PATHS)
 
 #LINKER_FLAGS specifies the libraries we're linking against
-FLAGS =-w -m32 -g -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
+FLAGS =-Wall -m32 -g -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
 
 #OBJ_NAME specifies the name of our exectuable
 OBJ_NAME = main.exe
@@ -23,7 +23,7 @@ OBJ_NAME = main.exe
 
 SRCS = $(wildcard src/*.cpp)
 
-$(warning SRCS IS $(SRCS))
+$(warning SRCS IS $(SRCS) \n)
 
 all: $(SRCS)
 	$(CC) $(SRCS) $(PATHS) $(FLAGS) -o $(OBJ_NAME)

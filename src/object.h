@@ -2,14 +2,14 @@
 #include <stdio.h>
 #include <SDL.h>
 #include <SDL_image.h>
+#include "resource_manager.h"
 
 class Object
 {
     
 private:
 
-    bool collisions, sprite_sht;
-    const char* sprite_load_path;
+    bool collisions, sprite_sht; 
 
     int cur_anim_tick=0, cur_anim=0;
     int spriteID;
@@ -22,11 +22,7 @@ private:
 
 public:
 
-    Object(const char* sprite_path, int col_width, int col_height, bool col, SDL_Renderer* ren);
-
-    Object(const char* sprite_path, int spr_width, int spr_height, int col_width, int col_height, bool col, SDL_Renderer* ren);
-
-    Object(int sprite_ID, int sprite_width, int sprite_height, int column_width, int col_height, Resource_manager r);
+    Object(unsigned int texture_ID, int texture_width, int texture_height, Resource_manager r);
 
     void update();
 

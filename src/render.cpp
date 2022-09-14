@@ -40,9 +40,9 @@ Renderer::~Renderer()
     gRenderer = NULL;
     camera=NULL;
 
-    IMG_Quit;
-    TTF_Quit;
-    SDL_Quit;
+    IMG_Quit();
+    TTF_Quit();
+    SDL_Quit();
 
 }
 

@@ -1,13 +1,15 @@
 #include "resource_manager.h"
 
 Resource_manager::Resource_manager(SDL_Renderer* ren)
+    : gRenderer(ren)
 {
-    this->gRenderer=ren;
+    numberOfFonts=0;
+    numberOfTextures=0;
 }
-//Texture Operations
 
-int Resource_manager::loadTexture(const char * f_path)
+unsigned int Resource_manager::loadTexture(const char * f_path)
 {
+    // numberOfTextures=numberOfTextures+1;
     SDL_Surface* surf = NULL;
     surf=IMG_Load(f_path);
     if(!surf)
@@ -28,20 +30,22 @@ int Resource_manager::loadTexture(const char * f_path)
         }
         else
         {
+            numberOfTextures++;
             textures.push_back(tex);
             texture_paths.push_back(f_path);
-            numberOfTextures++;
             SDL_FreeSurface(surf);
-            return numberOfTextures;
+            return numberOfTextures-1;
+           
         }
 
     }
-
 }
 
-SDL_Texture* Resource_manager::getTexture(int texture_ID)
+
+SDL_Texture* Resource_manager::getTexture(unsigned int texture_ID)
 {
-    if(texture_ID>=0&&texture_ID<=this->numberOfTextures)
+    // if(texture_ID>=0&&texture_ID<this->numberOfTextures)
+    if(texture_ID>=0&&texture_ID<this->numberOfTextures)
     {
         //Texture ID is valid. Now needs to check if there is a valid SDL_Texture at that position
         //in the vector. 
@@ -82,11 +86,12 @@ SDL_Texture* Resource_manager::getTexture(int texture_ID)
     }
     else
     {
+        fprintf(stderr, "ERROR: Invalid file Handle: %d.\n", texture_ID);
         return NULL;
     }
 }
 
-void Resource_manager::deleteTexture(int texture_ID)
+void Resource_manager::deleteTexture(unsigned int texture_ID)
 {
 
 }
@@ -95,15 +100,15 @@ void Resource_manager::deleteTexture(int texture_ID)
 
 int Resource_manager::loadFont(const char* f_path)
 {
-
+    return 0;
 }
 
-TTF_Font* Resource_manager::getFont(int font_ID)
+TTF_Font* Resource_manager::getFont(unsigned int font_ID)
 {
-
+    return NULL;
 }
 
-void Resource_manager::deleteFont(int font_ID)
+void Resource_manager::deleteFont(unsigned int font_ID)
 {
 
 }
