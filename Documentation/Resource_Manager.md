@@ -1,7 +1,11 @@
 # Resource Manager
+
  ## Explanation:
+
  The resource manager is a key component of any game engine and handles the loading and unloading of any none-code files including textures fonts and sound files. Later iterations will include loading of XML or JSON formats for levels and other game-related information. The loading and get-ing of the files uses a 'Handle' system which prevents pointers being constantly being passed about. Some design patterns like a singleton would be beneficial here.
+
 ---
+
 ## Class Structure
 ###
 
