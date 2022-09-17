@@ -22,7 +22,7 @@ int main( int argc, char* argv[] )
     Resource_manager manager(r.get_SDLRenderer());
     int test_tile=manager.loadTexture("res/textures/test/test_tileset1.png");
     Object o = Object(test_tile, 32, 32, manager);
-
+    manager.deleteTexture(test_tile);
 
     //Main loop flag
     bool quit = false;
@@ -53,13 +53,13 @@ int main( int argc, char* argv[] )
     }
 
     /*need to work with a basic input -> update -> render System*/
-	std::vector<std::vector<colorVals>> map;
-	int mapWidth, mapHeight;
+	// std::vector<std::vector<colorVals>> map;
+	// int mapWidth, mapHeight;
 
-	std::string mapName = "res/maps/Map2.png";
+	// std::string mapName = "res/maps/Map2.png";
 
-	mapReader::Reader(map, mapWidth, mapHeight, mapName);
-	mapReader::printMap(map);
+	// mapReader::Reader(map, mapWidth, mapHeight, mapName);
+	// mapReader::printMap(map);
 
 
     return 0;
