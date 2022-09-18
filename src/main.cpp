@@ -4,16 +4,19 @@
 #include <sstream>
 #include <math.h>
 
-#include "mapReader.h"
-// #include "render.h"
+// #include "mapReader.h"
 #include "fpsCounter.h"
+#include "render.h"
+#include "resource_manager.h"
+
 
 //Simple game design follows a Input -> Update -> draw Loop when running
 
 
-int mapReader::width, mapReader::height, mapReader::n;
+// int mapReader::width, mapReader::height, mapReader::n;
 
-std::vector<std::vector<colorVals>> map;
+
+// std::vector<std::vector<colorVals>> map;
 int mapWidth, mapHeight;
 std::string mapName = "res/maps/Map2.png";
 std::string fontPath = "res/fonts/comicz.ttf";
@@ -31,11 +34,12 @@ int fpsMSTotal = 0;
 int fpsCount = 0;
 float fps;
 
+
 int main( int argc, char* argv[] )
 {
 
     
-	mapReader::Reader(map, mapWidth, mapHeight, mapName);
+	// mapReader::Reader(map, mapWidth, mapHeight, mapName);
 
 
 
@@ -43,7 +47,16 @@ int main( int argc, char* argv[] )
 
     Renderer r = Renderer(1000, 1000, 60, IMG_INIT_PNG, "Test Render Window");
     r.Renderer_Init();
-    
+
+
+	// Alex testing rendering png from test textures
+    SDL_RenderClear(r.get_SDLRenderer());
+
+    Resource_manager manager(r.get_SDLRenderer());
+    int test_tile=manager.loadTexture("res/textures/test/test_tileset1.png");
+    Object o = Object(test_tile, 32, 32, manager);
+
+
     //Main loop flag
     bool quit = false;
 
@@ -91,7 +104,6 @@ int main( int argc, char* argv[] )
         }
 
 
-
 		// Rendering map // SLOW AS FUCK
 		// for (int i = 0; i < map.size(); i++) {
 		// 	for (int j = 0; j < map[0].size(); j++) {
@@ -128,6 +140,9 @@ int main( int argc, char* argv[] )
 
 
 		SDL_SetRenderDrawColor(r.get_SDLRenderer(), 200, 200, 200, 255);
+		// Another alex test piece
+        o.draw(r.get_SDLRenderer());
+
         SDL_RenderPresent(r.get_SDLRenderer());
     }
 
