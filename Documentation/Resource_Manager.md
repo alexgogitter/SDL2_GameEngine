@@ -78,6 +78,8 @@ Function to Delete textures from the ```textures``` vector. Sets the pointer val
 
 ### int Resource_manager::loadFont(const char* f_path, int font_size)
 
+Returns the unsigned integer handle for the font to be loaded at the location specified by ```f_path``` with size ```font_size```. ```Resource_manager::loadFont``` loads the pointer to the font into the ```fonts``` vector and also stores the font size and path in a ```font_info``` struct so that both pieces of information can be kept together.
+
 ---
 
 ### TTF_Font* Resource_manager::getFont(unsigned int font_ID)
