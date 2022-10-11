@@ -5,6 +5,7 @@
 #include "mapReader.h"
 #include "render.h"
 #include "resource_manager.h"
+#include "time.h"
 
 //Simple game design follows a Input -> Update -> draw Loop when running
 
@@ -19,6 +20,8 @@ int main( int argc, char* argv[] )
     r.Renderer_Init();
     SDL_RenderClear(r.get_SDLRenderer());
 
+    Time timer = Time();
+
     Resource_manager manager(r.get_SDLRenderer());
     int test_tile=manager.loadTexture("res/textures/test/test_tileset1.png");
     Object o = Object(test_tile, 32, 32, manager);
@@ -30,9 +33,13 @@ int main( int argc, char* argv[] )
     //Event handler
     SDL_Event e;
 
+    uint64_t current_tick;
+
     //While application is running
     while( !quit )
-    {   
+    {
+        timer.tick();
+        
         //Handle events on queue
         while( SDL_PollEvent( &e ) != 0 )
         {
@@ -50,8 +57,10 @@ int main( int argc, char* argv[] )
 
         SDL_RenderPresent(r.get_SDLRenderer());
 
-    }
+        current_tick = timer.tock();
 
+    }
+    printf("%d is last time\n", (int)current_tick);
     /*need to work with a basic input -> update -> render System*/
 	// std::vector<std::vector<colorVals>> map;
 	// int mapWidth, mapHeight;
