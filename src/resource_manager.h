@@ -5,7 +5,10 @@
 #include <SDL_image.h>
 #include <string>
 
-
+typedef struct {
+    const char * file_path;
+    int fontSize;
+} font_info;
 
 class Resource_manager
 {
@@ -22,7 +25,7 @@ class Resource_manager
         std::vector<const char*> texture_paths;
 
         std::vector<TTF_Font*> fonts;
-        std::vector<const char*> font_paths;
+        std::vector<font_info*> font_paths;
 
     public:
 
@@ -40,7 +43,7 @@ class Resource_manager
 
         //Font Operations
 
-        int loadFont(const char * f_path);
+        int loadFont(const char * f_path, int font_size);
 
         TTF_Font* getFont(unsigned int font_ID);
 

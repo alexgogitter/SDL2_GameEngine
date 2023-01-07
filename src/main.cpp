@@ -8,6 +8,7 @@
 #include "fpsCounter.h"
 #include "render.h"
 #include "resource_manager.h"
+#include "time.h"
 
 
 //Simple game design follows a Input -> Update -> draw Loop when running
@@ -52,16 +53,19 @@ int main( int argc, char* argv[] )
 	// Alex testing rendering png from test textures
     SDL_RenderClear(r.get_SDLRenderer());
 
+    Time timer = Time();
+
     Resource_manager manager(r.get_SDLRenderer());
     int test_tile=manager.loadTexture("res/textures/test/test_tileset1.png");
     Object o = Object(test_tile, 32, 32, manager);
-
+    manager.deleteTexture(test_tile);
 
     //Main loop flag
     bool quit = false;
 
     //Event handler
     SDL_Event e;
+
 
 	// Map rendering
 	SDL_Surface* surface = IMG_Load(mapName.c_str());
@@ -92,6 +96,15 @@ int main( int argc, char* argv[] )
 			fprintf(stderr, "RenderCopyError: %s", SDL_GetError());
 		}
 
+
+    uint64_t current_tick;
+
+    //While application is running
+    while( !quit )
+    {
+        timer.tick();
+        
+
         //Handle events on queue
         while( SDL_PollEvent( &e ) != 0 )
         {
@@ -104,7 +117,7 @@ int main( int argc, char* argv[] )
         }
 
 
-		// Rendering map // SLOW AS FUCK
+		// Rendering map // SLOW AS 
 		// for (int i = 0; i < map.size(); i++) {
 		// 	for (int j = 0; j < map[0].size(); j++) {
 				
@@ -144,9 +157,17 @@ int main( int argc, char* argv[] )
         o.draw(r.get_SDLRenderer());
 
         SDL_RenderPresent(r.get_SDLRenderer());
+
     }
 
+
+        current_tick = timer.tock();
+
+
+    }
+    printf("%d is last time\n", (int)current_tick);
     /*need to work with a basic input -> update -> render System*/
+intMap(map);
 
 	// mapReader::printMap(map);
 
