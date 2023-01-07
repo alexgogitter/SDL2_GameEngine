@@ -1,7 +1,11 @@
+#ifndef RENDER_H
+#define RENDER_H
+
 #include "object.h"
 #include "scene.h"
 
 #include <SDL_ttf.h>
+#include <string>
 
 
 
@@ -35,4 +39,8 @@ public:
 
     void Renderer_PresentFrame(){SDL_RenderPresent(gRenderer);}
 
+    void Renderer_ttf(std::string _text, TTF_Font* _font, SDL_Rect *_src, SDL_Rect *_dest, SDL_Color &_textColor);
+
 };
+
+#endif // RENDER_H

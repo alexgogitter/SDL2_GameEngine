@@ -1,6 +1,6 @@
 #CC specifies which compiler we're using
-CC = i686-w64-mingw32-g++.exe
-# CC = x86_64-w64-mingw32-g++.exe
+CC = i686-w64-mingw32-g++.exe # 32 bit compiler
+# CC = x86_64-w64-mingw32-g++.exe # 64 bit compiler
 
 #INCLUDE_PATHS specifies the additional include paths we'll need -IC:\mingw_dev_lib\include\SDL2
 INCLUDE_PATHS =  -Idependencies/include/SDL2

@@ -1,5 +1,5 @@
 #include "render.h"
-
+#include <string>
 
 Renderer::Renderer(int s_w, int s_h, int fc, int i_f, const char* title)
 {
@@ -35,7 +35,6 @@ Renderer::Renderer(int s_w, int s_h, int fc, int i_f, const char* title)
 
 Renderer::~Renderer()
 {
-
     gWindow = NULL;
     gRenderer = NULL;
     camera=NULL;
@@ -43,7 +42,6 @@ Renderer::~Renderer()
     IMG_Quit();
     TTF_Quit();
     SDL_Quit();
-
 }
 
 int Renderer::Renderer_Init()
@@ -51,6 +49,8 @@ int Renderer::Renderer_Init()
     //return 0 on success of Init, else return NOTZERO.
     int status=0;
     gWindow = SDL_CreateWindow(this->sTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_HEIGHT, SCREEN_WIDTH, SDL_WINDOW_SHOWN);
+    // Sets wether the window is resizeable
+    SDL_SetWindowResizable(gWindow, SDL_TRUE);
     if(gWindow==NULL)
     {
         printf( "Window could not be created! SDL_ERROR: %s\n", SDL_GetError() );
@@ -59,7 +59,7 @@ int Renderer::Renderer_Init()
     else
     {
         //Create Renderer for window
-        gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC );
+        gRenderer = SDL_CreateRenderer( gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC ); // SDL_RENDERER_PRESENTVSYNC 
         if( gRenderer == NULL )
         {
             fprintf(stderr, "Renderer could not be created! SDL Error: %s\n", SDL_GetError() );
@@ -95,4 +95,23 @@ void Renderer::Renderer_Draw(Object* o)
     SDL_RenderPresent(gRenderer);
 }
 
+// _text : string to show; font if path to font; _src section of texture; _dest where and how to display; textcolor - self explanitory
+void Renderer::Renderer_ttf(std::string _text, TTF_Font* _font, SDL_Rect *_src, SDL_Rect *_dest, SDL_Color &_textColor){
+
+    if (_font == NULL){
+        fprintf(stderr, "FONT NOT LOADED Renderer::Renderer_ttf %s\n", TTF_GetError());
+    }
+
+    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(_font, _text.c_str(), _textColor);
+
+    SDL_Texture* Message = SDL_CreateTextureFromSurface(this->gRenderer, surfaceMessage);
+
+    SDL_Rect TextContainer = {0,0,100,50};
+
+    SDL_RenderCopy(this->gRenderer, Message, _src, _dest);
+
+    // Free resorces
+    SDL_FreeSurface(surfaceMessage);
+    SDL_DestroyTexture(Message);
+}
 
