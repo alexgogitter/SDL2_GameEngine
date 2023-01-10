@@ -18,6 +18,7 @@ Milestone is an option we may decide at a later data
 Comment methods, return, args, brief description
 Code indentation is tabs set to space 4.
 Method scopes should be done on a new line.
+Put spaces between oporators e.g. char var='c'; ==> char var = 'c';
 
 pdata for a pointer to data
 
