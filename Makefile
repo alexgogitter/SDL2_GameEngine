@@ -1,34 +1,45 @@
-#CC specifies which compiler we're using
-CC = i686-w64-mingw32-g++.exe # 32 bit compiler
-# CC = x86_64-w64-mingw32-g++.exe # 64 bit compiler
+# Compiler
+CXX = x86_64-w64-mingw32-g++.exe
 
-#INCLUDE_PATHS specifies the additional include paths we'll need -IC:\mingw_dev_lib\include\SDL2
-INCLUDE_PATHS =  -Idependencies/include/SDL2
-
-#LIBRARY_PATHS specifies the additional library paths we'll need -LC:\mingw_dev_lib\lib
-LIBRARY_PATHS =  -Ldependencies/lib
-
-#COMPILER_FLAGS specifies the additional compilation options we're using
-# -w suppresses all warnings
-# -Wl,-subsystem,windows gets rid of the console window
-
-PATHS=$(LIBRARY_PATHS) $(INCLUDE_PATHS)
-
-#LINKER_FLAGS specifies the libraries we're linking against
-
-FLAGS = -Wall -m32 -g -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
-
-
-#OBJ_NAME specifies the name of our exectuable
+# Output executable
 OBJ_NAME = main.exe
 
-
+# Project source files
 SRCS = $(wildcard src/*.cpp)
 
-$(warning SRCS IS $(SRCS) \n)
+# Dear ImGui source files
+IMGUI_DIR = external/imgui
+IMGUI_SRCS = \
+	$(IMGUI_DIR)/imgui.cpp \
+	$(IMGUI_DIR)/imgui_draw.cpp \
+	$(IMGUI_DIR)/imgui_tables.cpp \
+	$(IMGUI_DIR)/imgui_widgets.cpp \
+	$(IMGUI_DIR)/imgui_demo.cpp \
+	$(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp \
+	$(IMGUI_DIR)/backends/imgui_impl_sdlrenderer2.cpp
+
+GLM_DIR = external/glm
 
 
-all: $(SRCS)
-	$(CC) $(SRCS) $(PATHS) $(FLAGS) -o $(OBJ_NAME)
-clean: 
-	rm -f $(PROGS)
+# Include paths and compiler options
+CXXFLAGS = -Wall -g -std=c++17 \
+	-IC:/msys64/ucrt64/include/SDL2 \
+	-I$(IMGUI_DIR) \
+	-I$(IMGUI_DIR)/backends \
+	-I$(GLM_DIR)
+
+# Library paths
+LDFLAGS = -LC:/msys64/ucrt64/lib
+
+# Libraries
+LIBS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
+
+# Build target
+all:
+	$(CXX) $(SRCS) $(IMGUI_SRCS) $(CXXFLAGS) $(LDFLAGS) -o $(OBJ_NAME) $(LIBS)
+
+# Clean target
+clean:
+	rm -f $(OBJ_NAME)
+
+.PHONY: all clean

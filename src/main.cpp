@@ -1,15 +1,19 @@
 #include <iostream>
 #include <stdio.h>
+#include <cstdint>
 #include <vector>
 #include <sstream>
 #include <math.h>
 
 // #include "mapReader.h"
-#include "fpsCounter.h"
-#include "render.h"
-#include "resource_manager.h"
-#include "time.h"
-
+#include "fpsCounter.hpp"
+#include "render.hpp"
+#include "resource_manager.hpp"
+#include "time.hpp"
+#include "interfaceImplementation.hpp"
+#include "object.hpp"
+#include "playerObject.hpp"
+#include "eventListener.hpp"
 
 //Simple game design follows a Input -> Update -> draw Loop when running
 
@@ -19,95 +23,86 @@
 
 // std::vector<std::vector<colorVals>> map;
 int mapWidth, mapHeight;
-std::string mapName = "res/maps/Map2.png";
+// std::string mapName = "res/maps/Map2.png";
 std::string fontPath = "res/fonts/comicz.ttf";
 
 const int tileSize = 5;
 const int mapStartX = 0, mapStartY = 0;
 
+// Frame timing
+std::uint64_t frameDeltaMs = 0;
 
+std::uint64_t fpsSampleElapsedMs = 0;
+int fpsSampleFrameCount = 0;
+float framesPerSecond = 0.0f;
 
-// Time constants
-Uint64 deltaTime = 0;
-Uint64 lastFrame = 0;
+std::vector<Object*> gameObjects;
 
-int fpsMSTotal = 0;
-int fpsCount = 0;
-float fps;
-
+void demoCallback() {
+	ImGui::Begin("Debug Panel");
+	ImGui::Text("Engine running");
+	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+	ImGui::End();
+}
 
 int main( int argc, char* argv[] )
 {
-
-    
 	// mapReader::Reader(map, mapWidth, mapHeight, mapName);
+	Renderer r = Renderer(1080, 1920, 60, IMG_INIT_PNG, "Test Render Window");
+	r.Renderer_Init();
+	Interface* interface = Interface::create(r.get_SDLWindow(), r.get_SDLRenderer());
 
-
-
-
-
-    Renderer r = Renderer(1000, 1000, 60, IMG_INIT_PNG, "Test Render Window");
-    r.Renderer_Init();
-
-
-	// Alex testing rendering png from test textures
-    SDL_RenderClear(r.get_SDLRenderer());
-
-    Time timer = Time();
+	Time frameTimer = Time();
 
     Resource_manager manager(r.get_SDLRenderer());
-    int test_tile=manager.loadTexture("res/textures/test/test_tileset1.png");
-    Object o = Object(test_tile, 32, 32, manager);
-    manager.deleteTexture(test_tile);
+    
 
     //Main loop flag
     bool quit = false;
 
     //Event handler
     SDL_Event e;
-
+	EventListener& eventListener = EventListener::Get();
 
 	// Map rendering
-	SDL_Surface* surface = IMG_Load(mapName.c_str());
-	if (surface == nullptr){
-		fprintf(stderr, "Surface Load Error");
-	}
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(r.get_SDLRenderer(), surface);
-	if (texture == nullptr){
-		fprintf(stderr, "Texture Load Error");
-	}
-	SDL_FreeSurface(surface);
+	// SDL_Surface* surface = IMG_Load(mapName.c_str());
+	// if (surface == nullptr){
+	// 	fprintf(stderr, "Surface Load Error");
+	// }
+	// SDL_Texture* texture = SDL_CreateTextureFromSurface(r.get_SDLRenderer(), surface);
+	// if (texture == nullptr){
+	// 	fprintf(stderr, "Texture Load Error");
+	// }
+	// SDL_FreeSurface(surface);
 	
 	fpsCounter fpsCountObj = fpsCounter();
 
-	SDL_Rect* mapRect = new SDL_Rect{100,100,400,100};
+	interface->addDrawCallback(demoCallback);
 
-    //While application is running
+	PlayerObject player = PlayerObject(manager, &r);
+
+	player.transform.setPosition(glm::vec2(r.get_screen_height() / 2, r.get_screen_width() / 2));
+	player.transform.setScale(glm::vec2(50.0f, 50.0f));
+	gameObjects.push_back(&player);
+
+		//While application is running
     while( !quit )
     {  
+		frameTimer.tick();
+
 		SDL_RenderClear(r.get_SDLRenderer());
 
-		Uint64 currentFrame = SDL_GetTicks64();
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-
-
-		if (SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, mapRect) != 0){
-			fprintf(stderr, "RenderCopyError: %s", SDL_GetError());
-		}
-
-
-    uint64_t current_tick;
-
-    //While application is running
-    while( !quit )
-    {
-        timer.tick();
+		// if (SDL_RenderCopy(r.get_SDLRenderer(), texture, NULL, mapRect) != 0){
+		// 	fprintf(stderr, "RenderCopyError: %s", SDL_GetError());
+		// }
         
 
         //Handle events on queue
         while( SDL_PollEvent( &e ) != 0 )
         {
+			eventListener.ProcessEvent(e);
+			interface->update(e);
+
             //User requests quit
             if( e.type == SDL_QUIT )
             {
@@ -117,60 +112,39 @@ int main( int argc, char* argv[] )
         }
 
 
-		// Rendering map // SLOW AS 
-		// for (int i = 0; i < map.size(); i++) {
-		// 	for (int j = 0; j < map[0].size(); j++) {
-				
-		// 		SDL_Rect rect1;
-		// 		rect1.y = mapStartY+i*tileSize; rect1.x = mapStartX+j*tileSize; 
-		// 		rect1.w = tileSize;
-		// 		rect1.h = tileSize;
-
-		// 		SDL_SetRenderDrawColor(r.get_SDLRenderer(), map[i][j].r, map[i][j].g, map[i][j].b, 255);
-		// 		SDL_RenderDrawRect(r.get_SDLRenderer(), &rect1);
-		// 		SDL_RenderFillRect(r.get_SDLRenderer(), &rect1);
-		// 	}
-		// }
-
-
-		// std::cout << fpsCount << std::endl;
-		if (fpsCount == 100){
-			std::cout << "FPSMSTOTAL: [" << fpsMSTotal << "] FPS: " << fps << std::endl;
-			
-			fps = (1000.0f / ((float)(fpsMSTotal) / 100));
-			// std::cout << (fpsMSTotal) / 1000.0f << std::endl;
-			fpsCount = 0; fpsMSTotal = 0;
+		//Scene Drawing goes here.
+		for (Object* obj : gameObjects) {
+			obj->update(frameDeltaMs);
+			obj->draw(&r);
 		}
-		fpsCount += 1;
-		fpsMSTotal += deltaTime;
+		
+		interface->draw(r.get_SDLRenderer());
 
-
-
-		std::ostringstream oss;
-		oss << floor(fps);
-
-		fpsCountObj.update(&r, oss.str());
-
-
+		std::ostringstream fpsText;
+		fpsText << floor(framesPerSecond);
+		fpsCountObj.update(&r, fpsText.str());
+		
 		SDL_SetRenderDrawColor(r.get_SDLRenderer(), 200, 200, 200, 255);
-		// Another alex test piece
-        o.draw(r.get_SDLRenderer());
+		SDL_RenderPresent(r.get_SDLRenderer());
 
-        SDL_RenderPresent(r.get_SDLRenderer());
+		frameDeltaMs = frameTimer.tock();
+		fpsSampleElapsedMs += frameDeltaMs;
+		fpsSampleFrameCount += 1;
 
+		if (fpsSampleFrameCount >= 100) {
+			if (fpsSampleElapsedMs > 0) {
+				framesPerSecond = (1000.0f * static_cast<float>(fpsSampleFrameCount)) / static_cast<float>(fpsSampleElapsedMs);
+			}
+			fpsSampleFrameCount = 0;
+			fpsSampleElapsedMs = 0;
+		}
     }
 
-
-        current_tick = timer.tock();
-
-
-    }
-    printf("%d is last time\n", (int)current_tick);
-    /*need to work with a basic input -> update -> render System*/
-intMap(map);
+	//     printf("%d is last time\n", (int)current_tick);
+	//     /*need to work with a basic input -> update -> render System*/
+	// intMap(map);
 
 	// mapReader::printMap(map);
-
-    return 0;
+	    return 0;
 
 }

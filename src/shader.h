@@ -1,6 +1,5 @@
-// //#pragma once // Same as below
-// #ifndef SHADER_H
-// #define SHADER_H
+#ifndef SHADER_H
+#define SHADER_H
 
 // #include <glad/glad.h>
 
@@ -161,4 +160,4 @@
 // 	}
 // };
 
-// #endif //SHADER_H
+#endif // SHADER_H

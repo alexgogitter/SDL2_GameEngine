@@ -1,5 +1,6 @@
-#include "render.h"
+#include "render.hpp"
 #include <string>
+#include <SDL_image.h>
 
 Renderer::Renderer(int s_w, int s_h, int fc, int i_f, const char* title)
 {
@@ -88,11 +89,6 @@ void Renderer::Renderer_Close()
 	//Destroy window	
 	SDL_DestroyRenderer( gRenderer );
 	SDL_DestroyWindow( gWindow );
-}
-
-void Renderer::Renderer_Draw(Object* o)
-{
-    SDL_RenderPresent(gRenderer);
 }
 
 // _text : string to show; font if path to font; _src section of texture; _dest where and how to display; textcolor - self explanitory

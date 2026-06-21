@@ -1,8 +1,14 @@
-# OpenGL_game
+# SDL2 Game Engine
 
-This project details a novice attempt at making a game engine using SDL2 libraries. 
+This project is a small SDL2-based game engine prototype with resource caching, an ImGui-backed debug UI, a renderer wrapper, and a lightweight object/component system.
 
 Made by Matthew Bannister and Alex Riddell.
+
+## Documentation
+
+The generated documentation lives in [Documentation/Index.md](/Documentation/Index.md).
+
+Start with [Documentation/Overview.md](/Documentation/Overview.md) for the architecture and [Documentation/Resource_Manager.md](/Documentation/Resource_Manager.md) for the asset cache.
 
 # Git etiquette
 

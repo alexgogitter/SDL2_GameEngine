@@ -1,89 +1,114 @@
 # Resource Manager
 
- ## Explanation:
+`Resource_manager` is the asset cache for the engine. It loads textures and fonts once, assigns integer handles, and keeps enough metadata to reload them later if the underlying SDL object has been deleted.
 
- The resource manager is a key component of any game engine and handles the loading and unloading of any none-code files including textures fonts and sound files. Later iterations will include loading of XML or JSON formats for levels and other game-related information. The loading and get-ing of the files uses a 'Handle' system which prevents pointers being constantly being passed about. Some design patterns like a singleton would be beneficial here.
+## Responsibilities
 
----
+- load textures from file paths
+- cache texture handles by path
+- load fonts by file path and size
+- cache font handles by path and size pair
+- preload textures and fonts for a level
+- return SDL pointers on demand for rendering code
 
-## Class Structure
-###
+## Types
 
-```c++
+### `font_info`
+
+A small request type used by `loadFonts()` and `loadLevelResources()`.
+
+- `file_path`: font asset path
+- `fontSize`: requested font size
+
+### `texture_info`
+
+Stores the source path and the current `SDL_Texture*`.
+
+### `font_resource_info`
+
+Stores the source path, font size, and the current `TTF_Font*`.
+
+## Class Overview
+
+```cpp
+class Resource_manager
 {
-    class Resource_manager
-    {
-     private:        
-        unsigned int numberOfTextures, numberOfFonts;
+private:
+    SDL_Renderer* gRenderer;
 
-        SDL_Renderer* gRenderer;
+    unsigned int nextTextureId;
+    unsigned int nextFontId;
 
-        std::vector<SDL_Texture*> textures;
-        std::vector<const char*> texture_paths;
+    std::map<unsigned int, texture_info> textures;
+    std::map<std::string, unsigned int> texture_ids_by_path;
 
-        std::vector<TTF_Font*> fonts;
-        std::vector<font_info*> font_paths;
+    std::map<unsigned int, font_resource_info> fonts;
+    std::map<std::string, unsigned int> font_ids_by_key;
 
-    public:
+    static std::string makeFontKey(const std::string& file_path, int font_size);
 
-        Resource_manager();
+public:
+    Resource_manager();
+    Resource_manager(SDL_Renderer* gRenderer);
 
-        Resource_manager(SDL_Renderer* gRenderer);
-        
-        //Texture Operations
+    unsigned int loadTexture(const char* f_path);
+    void loadTextures(const std::vector<std::string>& f_paths);
+    SDL_Texture* getTexture(unsigned int texture_ID);
+    void deleteTexture(unsigned int texture_ID);
 
-        unsigned int loadTexture(const char * f_path);
-        
-        SDL_Texture* getTexture(unsigned int texture_ID);
-
-        void deleteTexture(unsigned int texture_ID);
-
-        //Font Operations
-
-        int loadFont(const char * f_path, int font_size);
-
-        TTF_Font* getFont(unsigned int font_ID);
-
-        void deleteFont(unsigned int font_ID);
-
+    int loadFont(const char* f_path, int font_size);
+    void loadFonts(const std::vector<font_info>& font_requests);
+    void loadLevelResources(
+        const std::vector<std::string>& texture_paths,
+        const std::vector<font_info>& font_requests);
+    TTF_Font* getFont(unsigned int font_ID);
+    void deleteFont(unsigned int font_ID);
 };
-}
 ```
----
 
- # Functions
- ## Resource_manager::Resource_manager(SDL_Renderer* ren)
+## Behavior
 
- Constructor for the resource manager. Takes a pointer to a ```SDL_Renderer``` struct which gets used when creating ```SDL_Texture```s from ```SDL_Surface```s.
- Currently, the constructor sets all the default values for keeping track of currently loaded objects.
+### Texture Loading
 
----
+`loadTexture()` checks whether a path has already been cached. If the texture is already live, it returns the existing handle. If the texture was cached but later released, it reloads from the stored path.
 
- ### unsigned int Resource_manager::loadTexture(const char * f_path)
- This function is used to load the texture at the given ```f_path``` on the system's Harddisk. The image is loaded as a ```SDL_Surface``` and stored in the ```Resource_Manager```'s ```textures``` vector. An unsigned integer is returned as the 'Handle' for the texture and is used when another component requires a texture. This function also pushes a copy of the ```f_path``` to texture paths so if the texture is free'd somewhere else in the game loop and needs to be used again it can be just at a cost to cpu time.
+`getTexture()` follows the same cache-and-reload behavior when given a texture handle.
 
- **Just as a precaution: only the resource manager should free and load textures to prevent confusion and keep the system running as fast as possible**
+`deleteTexture()` destroys the SDL texture but retains the cache entry, so the handle can still be reused.
 
---- 
+### Font Loading
 
-### SDL_Texture* Resource_manager::getTexture(unsigned int texture_ID)
-Returns a ```SDL_Texture*``` based on the texture handle passed to it. If the texture at the specified Handle has been deleted or the pointer is NULL then the function will reload it from the Harddisk
+`loadFont()` caches fonts by a compound key of file path and size.
 
----
+`getFont()` returns the cached `TTF_Font*` or reloads it from the stored path and size if needed.
 
-### void Resource_manager::deleteTexture(unsigned int texture_ID)
-Function to Delete textures from the ```textures``` vector. Sets the pointer value to NULL to prevent any floating pointers or any errors caused from attempting to access an invalid ```SDL_Texture*```.
+`deleteFont()` closes the font while preserving the cache entry.
 
----
+### Preloading Helpers
 
-### int Resource_manager::loadFont(const char* f_path, int font_size)
+- `loadTextures()` loads a list of texture paths.
+- `loadFonts()` loads a list of font requests.
+- `loadLevelResources()` is a convenience wrapper for loading both resource sets together.
 
-Returns the unsigned integer handle for the font to be loaded at the location specified by ```f_path``` with size ```font_size```. ```Resource_manager::loadFont``` loads the pointer to the font into the ```fonts``` vector and also stores the font size and path in a ```font_info``` struct so that both pieces of information can be kept together.
+## Usage Pattern
 
----
+Create the resource manager after SDL has a renderer:
 
-### TTF_Font* Resource_manager::getFont(unsigned int font_ID)
+```cpp
+Resource_manager manager(renderer);
+unsigned int textureId = manager.loadTexture("res/textures/example.png");
+SDL_Texture* texture = manager.getTexture(textureId);
+```
 
----
+For fonts:
 
-### void Resource_manager::deleteFont(unsigned int font_ID)
+```cpp
+int fontId = manager.loadFont("res/fonts/comicz.ttf", 8);
+TTF_Font* font = manager.getFont(fontId);
+```
+
+## Notes
+
+- The resource manager assumes the renderer is valid when it loads textures.
+- It currently stores raw SDL pointers and relies on explicit cleanup calls.
+- `loadTexture()` and `loadFont()` return `-1` on failure, even though the handles are unsigned or stored as `int` in different places. That works in practice, but a dedicated sentinel type would be clearer.

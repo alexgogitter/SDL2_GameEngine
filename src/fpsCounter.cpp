@@ -1,4 +1,4 @@
-#include "fpsCounter.h"
+#include "fpsCounter.hpp"
 
 
 
@@ -51,6 +51,6 @@ void fpsCounter::update(Renderer* r, std::string text)
     r->Renderer_ttf(text, fpsFont, src, dest, *fpsColor);
 }
 
-// static void setDeltaTime(Uint64 _deltaTime){
+// static void setDeltaTime(std::uint64_t _deltaTime){
 //     deltaTime = _deltaTime;
 // }
