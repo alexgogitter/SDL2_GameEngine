@@ -1,24 +1,31 @@
 #pragma once
-#ifndef COMPONENT_HPP
-#define COMPONENT_HPP
+
 #include <cstdint>
 #include <string>
-#include <stdio.h>
 
 class Object;
+class Renderer;
 
 class Component
 {
-    protected:
-        Object* parent;
-    private:
-        
-        virtual void Update(std::uint64_t deltaTime) = 0;
-    public:
-        std::string name;
-        Component(const std::string& _name, Object* _parent): name(_name), parent(_parent) {}
-        void update(std::uint64_t deltaTime);
+protected:
+    Object* parent = nullptr;
+
+    virtual void Update(std::uint64_t deltaTime) = 0;
+    virtual void Draw(Renderer*) {}
+
+public:
+    std::string name;
+
+    Component(const std::string& componentName, Object* parentObject)
+        : parent(parentObject), name(componentName)
+    {
+    }
+
+    virtual ~Component() = default;
+
+    void update(std::uint64_t deltaTime);
+    void draw(Renderer* renderer);
+
+    Object* getParent() const { return parent; }
 };
-
-
-#endif // !COMPONENT_HPP

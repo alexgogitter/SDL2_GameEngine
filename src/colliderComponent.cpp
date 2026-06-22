@@ -1,23 +1,79 @@
 #include "colliderComponent.hpp"
+#include "rigidbodyComponent.hpp"
 
 
-
-void ColliderComponent::Update(std::uint64_t deltaTime)
+ColliderComponent::ColliderComponent(
+    Object* parentObject,
+    RigidbodyComponent& rigidbodyComponent,
+    const glm::vec2& colliderSizePixels,
+    float density,
+    float friction,
+    float restitution,
+    bool isSensor)
+    : Component("BoxCollider2D", parentObject),
+      rigidbody(&rigidbodyComponent),
+      sizePixels(colliderSizePixels)
 {
-    // Implement any necessary update logic for the collider component here
-    EventListener& eventListener = EventListener::Get();
-    const EventListener::MouseState& mouseState = eventListener.GetMouseState();
-    if(mouseState.x >= collider_box.x + parent->transform.getPosition()[0] - collider_box.w/2 && mouseState.x <= collider_box.x + parent->transform.getPosition()[0] + collider_box.w/2 &&
-       mouseState.y >= collider_box.y + parent->transform.getPosition()[1] - collider_box.h/2 && mouseState.y <= collider_box.y + parent->transform.getPosition()[1] + collider_box.h/2)
+    b2ShapeDef shapeDef = b2DefaultShapeDef();
+    shapeDef.density = density;
+    shapeDef.material.friction = friction;
+    shapeDef.material.restitution = restitution;
+    shapeDef.isSensor = isSensor;
+
+    // Box2D v3 stores events after stepping. Enable only the relevant stream.
+    shapeDef.enableContactEvents = !isSensor;
+    shapeDef.enableSensorEvents = isSensor;
+
+    // This is deliberately the collider component rather than the game object.
+    // Later collision events can identify exactly which collider was touched.
+    shapeDef.userData = this;
+
+    const glm::vec2 halfSizeMetres =
+        sizePixels * (0.5f / PhysicsWorld2D::PixelsPerMetre);
+
+    const b2Polygon box = b2MakeBox(halfSizeMetres.x, halfSizeMetres.y);
+   
+
+    shapeId = b2CreatePolygonShape(
+        rigidbody->getBodyId(),
+        &shapeDef,
+        &box
+    );
+}
+
+void ColliderComponent::setBoxSizePixels(const glm::vec2& newSizePixels)
+{
+    if (!b2Shape_IsValid(shapeId) || rigidbody == nullptr)
     {
-        // Mouse is over the collider box
-        // You can add logic here to handle mouse-over events
-        parent->draw_colour = glm::vec4(0.0f, 255.0f, 0.0f, 255.0f); // Change color when mouse is over
-    }
-    else
-    {
-        // Mouse is not over the collider box
-        parent->draw_colour = glm::vec4(255.0f, 0.0f, 0.0f, 255.0f); // Change color back to red when mouse is not over
+        return;
     }
 
+    sizePixels = newSizePixels;
+
+    const glm::vec2 halfSizeMetres =
+        sizePixels * (0.5f / PhysicsWorld2D::PixelsPerMetre);
+
+    const b2Polygon box = b2MakeBox(halfSizeMetres.x, halfSizeMetres.y);
+
+    b2Shape_SetPolygon(shapeId, &box);
+
+    // Changing polygon geometry does not automatically update dynamic-body mass.
+    b2Body_ApplyMassFromShapes(rigidbody->getBodyId());
+}
+
+void ColliderComponent::destroyShape()
+{
+    if (!b2Shape_IsValid(shapeId))
+    {
+        return;
+    }
+
+    b2DestroyShape(shapeId, true);
+    shapeId = b2_nullShapeId;
+}
+
+void ColliderComponent::Update(std::uint64_t)
+{
+    // Box2D owns collision detection. This component only owns shape setup,
+    // configuration and future runtime deformation.
 }
