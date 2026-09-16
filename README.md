@@ -38,7 +38,7 @@ cmake --build --preset msvc-debug --target SDL2_GameEngine --parallel
 Run the Debug build from the repository root:
 
 ```powershell
-.\build\msvc-vs2022\Debug\SDL2_GameEngine.exe
+.\build\msvc-vs2022-x64\Debug\SDL2_GameEngine.exe
 ```
 
 The repository also contains a legacy Makefile workflow for the MSYS2 UCRT64

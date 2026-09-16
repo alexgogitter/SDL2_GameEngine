@@ -14,11 +14,18 @@ GAME_NAME := SDL2_GameEngine
 # Output locations
 BIN_DIR       := bin
 DIST_DIR      := dist
-DEBUG_EXE     := $(BIN_DIR)/$(GAME_NAME)_debug.exe
-RELEASE_EXE   := $(BIN_DIR)/$(GAME_NAME).exe
+CMAKE_BUILD_DIR := build/msvc-vs2022-x64
+DEBUG_BIN_DIR := $(CMAKE_BUILD_DIR)/Debug
+RELEASE_BIN_DIR := $(CMAKE_BUILD_DIR)/Release
+DEBUG_EXE     := $(DEBUG_BIN_DIR)/$(GAME_NAME).exe
+RELEASE_EXE   := $(RELEASE_BIN_DIR)/$(GAME_NAME).exe
 
 PACKAGE_DIR   := $(DIST_DIR)/$(GAME_NAME)-windows-x64
 PACKAGE_ZIP   := $(DIST_DIR)/$(GAME_NAME)-windows-x64.zip
+
+# The current engine uses NVIDIA PhysX through vcpkg, so the supported build
+# path is MSVC/CMake. The helper script discovers Visual Studio and vcpkg.
+MSVC_BUILD := .\\tools\\build_msvc.bat
 
 # ------------------------------------------------------------
 # Source files
@@ -128,31 +135,15 @@ $(BOX2D_LIB): $(BOX2D_DIR)/CMakeLists.txt
 # Debug build
 # ------------------------------------------------------------
 
-debug: $(DEBUG_EXE)
-
-$(DEBUG_EXE): $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) $(BOX2D_LIB)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) \
-		$(COMMON_FLAGS) $(DEBUG_FLAGS) \
-		$(LDFLAGS) \
-		-o $(DEBUG_EXE) \
-		$(LIBS)
+debug:
+	cmd.exe //d //c $(MSVC_BUILD) Debug $(GAME_NAME)
 
 # ------------------------------------------------------------
 # Release build
 # ------------------------------------------------------------
 
-release: $(RELEASE_EXE)
-
-$(RELEASE_EXE): $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) $(BOX2D_LIB)
-	@mkdir -p $(BIN_DIR)
-	$(CXX) $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) \
-		$(COMMON_FLAGS) $(RELEASE_FLAGS) \
-		$(LDFLAGS) \
-		-static-libgcc \
-		-static-libstdc++ \
-		-o $(RELEASE_EXE) \
-		$(LIBS)
+release:
+	cmd.exe //d //c $(MSVC_BUILD) Release $(GAME_NAME)
 
 # ------------------------------------------------------------
 # Portable Windows package for friends
@@ -167,9 +158,7 @@ package: release
 	mkdir -p $(PACKAGE_DIR)/licenses
 
 	cp $(RELEASE_EXE) $(PACKAGE_DIR)/$(GAME_NAME).exe
-	cp SDL2.dll $(PACKAGE_DIR)/
-	cp SDL2_image.dll $(PACKAGE_DIR)/
-	cp SDL2_ttf.dll $(PACKAGE_DIR)/
+	cp $(RELEASE_BIN_DIR)/*.dll $(PACKAGE_DIR)/
 
 	cp -r res $(PACKAGE_DIR)/res
 	cp README.md $(PACKAGE_DIR)/README.md
@@ -194,7 +183,7 @@ package: release
 
 	powershell.exe -NoProfile -Command "Compress-Archive -Path '$(PACKAGE_DIR)' -DestinationPath '$(PACKAGE_ZIP)' -Force"
 
-	@echo.
+	@echo
 	@echo Package created:
 	@echo $(PACKAGE_ZIP)
 

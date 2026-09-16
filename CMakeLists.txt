@@ -47,11 +47,11 @@ add_library(imgui SHARED
     external/imgui/backends/imgui_impl_sdl2.cpp
 )
 
-    if(WIN32)
-        set_target_properties(imgui PROPERTIES
-            WINDOWS_EXPORT_ALL_SYMBOLS ON
-        )
-    endif()
+if(WIN32)
+    set_target_properties(imgui PROPERTIES
+        WINDOWS_EXPORT_ALL_SYMBOLS ON
+    )
+endif()
 
 target_include_directories(imgui
     PUBLIC
@@ -72,8 +72,7 @@ set(BOX2D_DOCS OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(external/box2d)
 
-# Current engine executable
-# Core engine runtime
+# Core engine runtime sources
 set(ENGINE_RUNTIME_SOURCES
     src/animationControllerComponent.cpp
     src/camera2D.cpp
@@ -175,44 +174,20 @@ target_compile_definitions(EngineRuntime
         ENGINE_RUNTIME_BUILD
 )
 
-# These are PUBLIC temporarily because several current engine headers expose
-# SDL, ImGui, Box2D and GLM types. We will reduce that leakage later.
 target_link_libraries(EngineRuntime
     PUBLIC
         SDL2::SDL2
         SDL2_image::SDL2_image
         SDL2_ttf::SDL2_ttf
         OpenGL::GL
-        box2d::box2d
+        box2d
         glad
         imgui
-)
-
-target_link_libraries(EngineRuntime
     PRIVATE
         unofficial::omniverse-physx-sdk::sdk
 )
 
-# Optional sample game. It is compiled separately and
-# is not linked into the editor.
-add_library(ConstructionSampleModule STATIC
-    samples/construction/constructionSample.cpp
-    samples/construction/ConstructionSample.hpp
-)
-
-target_include_directories(
-    ConstructionSampleModule
-    PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/samples/construction"
-)
-
-target_link_libraries(
-    ConstructionSampleModule
-    PRIVATE
-        Engine::Runtime
-)
-
-# Generic engine editor.
+# Generic engine editor
 add_executable(SDL2_GameEngine
     src/main.cpp
 )
@@ -233,14 +208,9 @@ if(MSVC)
         /W4
         /Zc:__cplusplus
     )
-
-    target_compile_options(ConstructionSampleModule PRIVATE
-        /W4
-        /Zc:__cplusplus
-)
 endif()
 
-# Copy SDL and its transitive runtime DLLs beside the executable.
+# Copy SDL and PhysX runtime DLLs beside the executable.
 if(WIN32)
     add_custom_command(
         TARGET SDL2_GameEngine
@@ -251,22 +221,23 @@ if(WIN32)
         COMMAND_EXPAND_LISTS
     )
 
-    set(
-    PHYSX_RUNTIME_DIRECTORY
-    "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/$<$<CONFIG:Debug>:debug/>bin"
-    )
+    if(DEFINED VCPKG_TARGET_TRIPLET)
+        set(PHYSX_RUNTIME_DIRECTORY
+            "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/$<$<CONFIG:Debug>:debug/>bin"
+        )
 
-    add_custom_command(
-        TARGET SDL2_GameEngine
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PHYSX_RUNTIME_DIRECTORY}/PhysX_64.dll"
-            "${PHYSX_RUNTIME_DIRECTORY}/PhysXCommon_64.dll"
-            "${PHYSX_RUNTIME_DIRECTORY}/PhysXFoundation_64.dll"
-            "${PHYSX_RUNTIME_DIRECTORY}/PhysXCooking_64.dll"
-            $<TARGET_FILE_DIR:SDL2_GameEngine>
-        VERBATIM
-    )
+        add_custom_command(
+            TARGET SDL2_GameEngine
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${PHYSX_RUNTIME_DIRECTORY}/PhysX_64.dll"
+                "${PHYSX_RUNTIME_DIRECTORY}/PhysXCommon_64.dll"
+                "${PHYSX_RUNTIME_DIRECTORY}/PhysXFoundation_64.dll"
+                "${PHYSX_RUNTIME_DIRECTORY}/PhysXCooking_64.dll"
+                $<TARGET_FILE_DIR:SDL2_GameEngine>
+            VERBATIM
+        )
+    endif()
 endif()
 
 set_target_properties(SDL2_GameEngine PROPERTIES

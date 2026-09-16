@@ -1,0 +1,46 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "msvc-vs2022",
+      "displayName": "MSVC Visual Studio 2022 x64",
+      "description": "Configure the engine with Visual Studio 2022 and vcpkg manifest dependencies.",
+      "generator": "Visual Studio 17 2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "binaryDir": "${sourceDir}/build/msvc-vs2022-x64",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-debug",
+      "displayName": "MSVC Debug",
+      "description": "Build the Debug configuration from the Visual Studio 2022 preset.",
+      "configurePreset": "msvc-vs2022",
+      "configuration": "Debug"
+    },
+    {
+      "name": "msvc-release",
+      "displayName": "MSVC Release",
+      "description": "Build the Release configuration from the Visual Studio 2022 preset.",
+      "configurePreset": "msvc-vs2022",
+      "configuration": "Release"
+    }
+  ]
+}

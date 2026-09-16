@@ -1,2 +1,8 @@
 *.exe
 .vscode
+vcpkg*
+./bin
+./cmake-build-debug
+./external
+build/
+dist/

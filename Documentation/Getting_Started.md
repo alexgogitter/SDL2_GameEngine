@@ -130,8 +130,8 @@ bin/SDL2_GameEngine.exe
 The recommended MSVC build produces:
 
 ```text
-build/msvc-vs2022/Debug/SDL2_GameEngine.exe
-build/msvc-vs2022/Release/SDL2_GameEngine.exe
+build/msvc-vs2022-x64/Debug/SDL2_GameEngine.exe
+build/msvc-vs2022-x64/Release/SDL2_GameEngine.exe
 ```
 
 If Box2D needs to be regenerated:
@@ -147,7 +147,7 @@ Run the recommended Debug executable with the repository root as its working
 directory:
 
 ```powershell
-.\build\msvc-vs2022\Debug\SDL2_GameEngine.exe
+.\build\msvc-vs2022-x64\Debug\SDL2_GameEngine.exe
 ```
 
 The runtime expects the following DLLs to be discoverable beside the executable
