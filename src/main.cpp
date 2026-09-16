@@ -1,188 +1,477 @@
+#include <algorithm>
 #include <cstdint>
-#include <cmath>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <vector>
+
+#include <SDL.h>
+#include <SDL_image.h>
 
 #include "eventListener.hpp"
-#include "fpsCounter.hpp"
 #include "interfaceImplementation.hpp"
-#include "physicsBoxObject.hpp"
-#include "physicsWorld2D.hpp"
-#include "playerObject.hpp"
-#include "render.hpp"
+#include "render2D.hpp"
 #include "resource_manager.hpp"
-#include "textureComponent.hpp"
 #include "time.hpp"
 
-std::string fontPath = "res/fonts/comicz.ttf";
+#include <cassert>
+#include <cstring>
 
-std::uint64_t frameDeltaMs = 16;
-std::uint64_t fpsSampleElapsedMs = 0;
-int fpsSampleFrameCount = 0;
-float framesPerSecond = 0.0f;
-std::size_t spawnedSquareCount = 0;
+#include <imgui.h>
 
-void demoCallback()
+#include "builtInComponents.hpp"
+#include "editorSelection.hpp"
+#include "layerRegistry.hpp"
+#include "objectInspector.hpp"
+#include "componentInspector.hpp"
+#include "componentRegistry.hpp"
+#include "object.hpp"
+#include "scene.hpp"
+#include "sceneHierarchy.hpp"
+
+#include "physxContext.hpp"
+#include "physicsWorld2D.hpp"
+#include "physicsWorld3D.hpp"
+
+#include "cameraComponent.hpp"
+#include "cameraSystem.hpp"
+
+#include "cameraOutputPanel.hpp"
+#include "gameViewPanel.hpp"
+#include "renderTarget.hpp"
+#include "render3D.hpp"
+#include "window.hpp"
+#include "editorCamera.hpp"
+#include "meshFilterComponent.hpp"
+#include "sceneViewPanel.hpp"
+#include "editorPlayState.hpp"
+#include "editorPlayToolbar.hpp"
+#include "editorPlaySnapshot.hpp"
+
+namespace
 {
-    ImGui::Begin("Physics Test Scene");
-    ImGui::Text("Left-click: spawn a physics square");
-    ImGui::Text("Blue: player | Green: platform | Stone: spawned squares");
-    ImGui::Text("Spawned squares: %zu", spawnedSquareCount);
-    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-    ImGui::End();
+    void SubmitSelectedObjectOutline(Renderer3D& renderer, Resource_manager& resources, Scene& scene, EditorSelection& selection)
+    {
+        Object* selected = selection.getSelectedObject(scene);
+
+        if (selected == nullptr || !selected->isActive())
+        {
+            return;
+        }
+
+        MeshFilterComponent* filter = selected->getComponent<MeshFilterComponent>();
+
+        if (filter == nullptr)
+        {
+            return;
+        }
+
+        MeshRenderState mesh;
+
+        if (!resources.getMeshRenderState(filter->getMesh(), mesh))
+        {
+            return;
+        }
+
+        renderer.SubmitSelectionOutline(mesh, selected->getWorldMatrix(), glm::vec4(0.97f, 0.63f, 0.16f, 1.0f), 1.05f, selected->getLayer());
+    }
 }
 
 int main(int, char**)
 {
-    Renderer renderer(1080, 1920, 60, IMG_INIT_PNG, "Box2D Physics Test");
-    if (renderer.Renderer_Init() != 0)
+
+    Window window(1600, 900, 60, IMG_INIT_PNG, "Game Engine");
+    if (!window.Initialize())
     {
         return 1;
     }
 
-    Interface* interface = Interface::create(
-        renderer.get_SDLWindow(),
-        renderer.get_SDLRenderer()
-    );
-
+    Renderer2D renderer(window);
+    if (renderer.Renderer_Init() != 0)
     {
-        Resource_manager resources(renderer.get_SDLRenderer());
-        PhysicsWorld2D physicsWorld;
-        fpsCounter fpsCounterObject;
+        window.Shutdown();
+        return 2;
+    }
+
+    Renderer3D renderer3D(window);
+    if (!renderer3D.Initialize())
+    {
+        renderer.Renderer_Close();
+        window.Shutdown();
+        return 3;
+    }
+
+    PhysXContext physxContext;
+
+    if (!physxContext.isValid())
+    {
+        renderer3D.Shutdown();
+        renderer.Renderer_Close();
+        window.Shutdown();
+        return 4;
+    }
+
+    PhysicsWorld3D physicsWorld(physxContext);
+    PhysicsWorld2D physicsWorld2D(physxContext);
+
+    if (!physicsWorld.isValid() || !physicsWorld2D.isValid())
+    {
+        renderer3D.Shutdown();
+        renderer.Renderer_Close();
+        window.Shutdown();
+        return 5;
+    }
+
+    Interface* interface = Interface::create(window.GetSDLWindow(), window.GetGLContext());
+
+    if (interface == nullptr)
+    {
+        renderer3D.Shutdown();
+        renderer.Renderer_Close();
+        window.Shutdown();
+        return 6;
+    }
+    else
+    {
+        Resource_manager resources;
+        ComponentRegistry componentRegistry;
+
+        const bool componentsRegistered = RegisterBuiltInComponents(componentRegistry);
+
+        Scene editorScene(resources, renderer, renderer3D);
+        LayerRegistry editorLayers;
+        EditorSelection editorSelection;
+
+        CameraSystem cameraSystem;
+
+        RenderTarget gameViewTarget(960, 540);
+        GameViewPanelState gameViewPanelState;
+
+        RenderTarget sceneViewTarget(960, 540);
+        SceneViewPanelState sceneViewPanelState;
+        
+        EditorCamera editorCamera(960.0f, 540.0f);
+        EditorPlayState editorPlayState;
+        EditorPlaySnapshot editorPlaySnapshot;
+
+
+        //// ================================== BEGIN SCENE POPULATION SETUP ==========================
+
+        // Object* inspectorLightObject = editorScene.createObject("Inspector Light");
+
+        // Component* inspectorLightComponent = nullptr;
+
+        // if (componentsRegistered && inspectorLightObject != nullptr)
+        // {
+        //     // Prevent the light object itself from drawing a fallback quad.
+        //     inspectorLightObject->draw_colour.a = 0.0f;
+
+        //     ComponentCreateContext context;
+        //     context.physicsWorld3D = &physicsWorld;
+        //     context.resources = &resources;
+        //     context.renderer = &renderer;
+
+        //     inspectorLightComponent = componentRegistry.createAndAttach("PointLight2D", *inspectorLightObject, context);
+
+        // }
+
+        Object* physicsFloorObject = editorScene.createObject("Physics Floor"); 
+        
+        Object* physicsCubeObject = editorScene.createObject("Physics Cube");
+
+        Object* mainCameraObject = editorScene.createObject("Main Camera");
+
+        if (componentsRegistered && mainCameraObject != nullptr)
+        {
+            mainCameraObject->draw_colour.a = 0.0f;
+
+            mainCameraObject->transform.setPosition(glm::vec3(0.0f, 4.0f, 10.0f));
+
+            mainCameraObject->transform.setEulerRadians(glm::vec3(glm::radians(-20.0f), 0.0f, 0.0f));
+
+            ComponentCreateContext context;
+            context.resources = &resources;
+            context.renderer = &renderer;
+            context.renderer3D = &renderer3D;
+            context.physicsWorld3D = &physicsWorld;
+
+            componentRegistry.createAndAttach("Camera", *mainCameraObject, context);
+
+            editorSelection.selectObject(mainCameraObject);
+        }
+
+        if (mainCameraObject != nullptr)
+        {
+            cameraSystem.setPrimaryCamera(editorScene, CameraOutputTarget::GameView, mainCameraObject->getId());
+        }
+
+        if (componentsRegistered && physicsFloorObject != nullptr)
+        {
+
+            physicsFloorObject->transform.setPosition(glm::vec3(0.0f, -1.0f, 0.0f));
+
+            physicsFloorObject->transform.setScale(glm::vec3(12.0f, 0.5f, 12.0f));
+
+            ComponentCreateContext context;
+            context.resources = &resources;
+            context.renderer = &renderer;
+            context.renderer3D = &renderer3D;
+            context.physicsWorld3D = &physicsWorld;
+
+            componentRegistry.createAndAttach("MeshFilter3D", *physicsFloorObject, context);
+
+            componentRegistry.createAndAttach("MeshRenderer3D", *physicsFloorObject, context);
+
+            // No Rigidbody3D is attached. BoxCollider3D
+            // therefore creates a static PhysX actor.
+            componentRegistry.createAndAttach("BoxCollider3D", *physicsFloorObject, context);
+        }
+
+        if (componentsRegistered && physicsCubeObject != nullptr)
+        {
+            // MeshFilter does not render by itself. Prevent the
+            // object's legacy fallback 2D quad from appearing.            
+            ComponentCreateContext context;
+            context.resources = &resources;
+            context.renderer = &renderer;
+            context.renderer3D = &renderer3D;
+            context.physicsWorld3D = &physicsWorld;
+
+            physicsCubeObject->transform.setPosition(glm::vec3(0.0f, 5.0f, 0.0f));
+
+            componentRegistry.createAndAttach("MeshFilter3D", *physicsCubeObject, context);
+            
+
+            componentRegistry.createAndAttach("MeshRenderer3D", *physicsCubeObject, context);
+
+            componentRegistry.createAndAttach("Rigidbody3D", *physicsCubeObject, context);
+
+            componentRegistry.createAndAttach("BoxCollider3D", *physicsCubeObject, context);
+
+            editorSelection.selectObject(physicsCubeObject);
+
+            
+
+        }
+
+        ////// =============================== END SCENE POPULATION SETUP ==========================
+
+        ComponentCreateContext editorComponentContext;
+        editorComponentContext.resources = &resources;
+        editorComponentContext.physicsWorld = &physicsWorld2D;
+        editorComponentContext.physicsWorld3D = &physicsWorld;
+        editorComponentContext.renderer = &renderer;
+        editorComponentContext.renderer3D = &renderer3D;
+
         Time frameTimer;
+        std::uint64_t frameDeltaMs = 16;
 
-        // Unique ownership is essential because left-click creates objects at runtime.
-        // physicsWorld is declared before this vector, so all bodies are destroyed
-        // before the Box2D world is destroyed when this scope ends.
-        std::vector<std::unique_ptr<Object>> gameObjects;
+        interface->addDrawCallback(
+            [
+                &editorScene,
+                &editorSelection,
+                &editorLayers,
+                &cameraSystem,
+                &gameViewTarget,
+                &gameViewPanelState,
+                &sceneViewTarget,
+                &sceneViewPanelState,
+                &editorCamera,
+                &editorPlayState,
+                &componentRegistry,
+                &editorComponentContext
+            ]()
+            {
+                if (gameViewPanelState.fullscreen)
+                {
+                    DrawGameViewPanel(gameViewTarget, gameViewPanelState);
+                    return;
+                }
 
-        int screenWidth = 0;
-        int screenHeight = 0;
-        SDL_GetRendererOutputSize(
-            renderer.get_SDLRenderer(),
-            &screenWidth,
-            &screenHeight
+                DrawEditorPlayToolbar(editorPlayState);
+
+                ImGui::Begin("Hierarchy");
+                DrawSceneHierarchy(editorScene, editorSelection);
+                ImGui::End();
+
+                DrawCameraOutputPanel(cameraSystem, editorScene);
+
+                ImGui::Begin("Inspector");
+
+                Object* selected = editorSelection.getSelectedObject(editorScene);
+
+                if (selected != nullptr)
+                {
+                    DrawObjectInspector(*selected, editorLayers, componentRegistry, editorComponentContext, editorPlayState.isEditing());
+                }
+                else
+                {
+                    ImGui::TextDisabled("No object selected");
+                }
+
+                ImGui::End();
+
+                DrawGameViewPanel(gameViewTarget, gameViewPanelState);
+
+                DrawSceneViewPanel(sceneViewTarget, editorCamera, editorScene, editorSelection, sceneViewPanelState);
+            }
         );
-
-        interface->addDrawCallback(demoCallback);
-
-        gameObjects.push_back(std::make_unique<PhysicsBoxObject>(
-            "Platform",
-            resources,
-            &renderer,
-            physicsWorld,
-            glm::vec2(screenWidth * 0.5f, screenHeight - 130.0f),
-            glm::vec2(900.0f, 50.0f),
-            BodyType2D::Static,
-            glm::vec4(75.0f, 185.0f, 115.0f, 255.0f),
-            true,
-            1.0f,
-            0.9f,
-            0.0f
-        ));
-
-        gameObjects.push_back(std::make_unique<PlayerObject>(
-            resources,
-            &renderer,
-            physicsWorld,
-            glm::vec2(screenWidth * 0.5f, 130.0f)
-        ));
 
         bool quit = false;
         SDL_Event event;
-        EventListener& eventListener = EventListener::Get();
+        EventListener& input = EventListener::Get();
 
         while (!quit)
         {
             frameTimer.tick();
-            eventListener.BeginFrame();
+            input.BeginFrame();
 
             while (SDL_PollEvent(&event) != 0)
             {
-                eventListener.ProcessEvent(event);
-                interface->update(event);
+                input.ProcessEvent(event);
+                interface->update(event);           
 
                 if (event.type == SDL_QUIT)
                 {
                     quit = true;
                 }
             }
-
-            // Mouse events have been processed, so this uses the click position
-            // from the current frame rather than a frame-old value.
-            if (eventListener.WasMouseButtonPressed(SDL_BUTTON_LEFT) &&
-                !ImGui::GetIO().WantCaptureMouse)
-            {
-                const EventListener::MouseState& mouse = eventListener.GetMouseState();
-
-                auto spawnedSquare = std::make_unique<PhysicsBoxObject>(
-                    "SpawnedSquare",
-                    resources,
-                    &renderer,
-                    physicsWorld,
-                    glm::vec2(static_cast<float>(mouse.x), static_cast<float>(mouse.y)),
-                    glm::vec2(42.0f, 42.0f),
-                    BodyType2D::Dynamic,
-                    glm::vec4(245.0f, 145.0f, 45.0f, 255.0f),
-                    false,
-                    3.0f,
-                    1.0f,
-                    0.15f
-                );
-
-                spawnedSquare->add_Component(new TextureComponent(
-                    spawnedSquare.get(),
-                    resources,
-                    "res/textures/2D-Ground/blktex_stone_01.png"
-                ));
-
-                gameObjects.push_back(std::move(spawnedSquare));
-
-                ++spawnedSquareCount;
-            }
-
-            physicsWorld.Step(static_cast<float>(frameDeltaMs) / 1000.0f);
-
-            SDL_SetRenderDrawColor(renderer.get_SDLRenderer(), 28, 30, 38, 255);
-            SDL_RenderClear(renderer.get_SDLRenderer());
-
-            for (const std::unique_ptr<Object>& object : gameObjects)
-            {
-                object->update(frameDeltaMs);
-                object->draw(&renderer);
-            }
-
-            interface->draw(renderer.get_SDLRenderer());
-
-            std::ostringstream fpsText;
-            fpsText << std::floor(framesPerSecond);
-            fpsCounterObject.update(&renderer, fpsText.str());
-
-            SDL_RenderPresent(renderer.get_SDLRenderer());
-
-            frameDeltaMs = frameTimer.tock();
-            fpsSampleElapsedMs += frameDeltaMs;
-            ++fpsSampleFrameCount;
-
-            if (fpsSampleFrameCount >= 100)
-            {
-                if (fpsSampleElapsedMs > 0)
+            if (input.WasKeyPressed(SDL_SCANCODE_F11))
                 {
-                    framesPerSecond =
-                        (1000.0f * static_cast<float>(fpsSampleFrameCount)) /
-                        static_cast<float>(fpsSampleElapsedMs);
+                    const bool requestedFullscreen = !gameViewPanelState.fullscreen;
+
+                    if (window.SetFullscreen(requestedFullscreen))
+                    {
+                        gameViewPanelState.fullscreen = requestedFullscreen;
+                    }
                 }
 
-                fpsSampleFrameCount = 0;
-                fpsSampleElapsedMs = 0;
+                if (input.WasKeyPressed(SDL_SCANCODE_ESCAPE))
+                {
+                    if (gameViewPanelState.fullscreen)
+                    {
+                        if (window.SetFullscreen(false))
+                        {
+                            gameViewPanelState.fullscreen = false;
+                        }
+                    }
+                    else
+                    {
+                        quit = true;
+                    }
+                }
+
+            const float deltaSeconds = static_cast<float>(std::min<std::uint64_t>(frameDeltaMs, 50)) / 1000.0f;
+
+            sceneViewTarget.resize(sceneViewPanelState.requestedWidth, sceneViewPanelState.requestedHeight);
+
+            gameViewTarget.resize(gameViewPanelState.requestedWidth, gameViewPanelState.requestedHeight);
+
+            editorCamera.update(input, sceneViewPanelState.hovered, deltaSeconds);
+
+            if (sceneViewPanelState.hovered && input.WasKeyPressed(SDL_SCANCODE_F))
+            {
+                Object* selected = editorSelection.getSelectedObject(editorScene);
+
+                if (selected != nullptr)
+                {
+                    editorCamera.focus(selected->getWorldPosition(), 10.0f);
+                }
             }
+
+            const bool advanceSingleFrame = editorPlayState.consumeSingleStepRequest();
+
+            if (editorPlayState.isPlaying() || advanceSingleFrame)
+            {
+                const float simulationDelta = advanceSingleFrame ? PhysicsWorld3D::FixedTimeStep : deltaSeconds;
+
+                physicsWorld.Step(simulationDelta);
+
+                const std::uint64_t simulationDeltaMs = advanceSingleFrame ? static_cast<std::uint64_t>(PhysicsWorld3D::FixedTimeStep * 1000.0f) : frameDeltaMs;
+
+                editorScene.update(simulationDeltaMs);
+            }
+
+            renderer.SetActiveCamera(&editorCamera.getCamera());
+            renderer3D.SetActiveCamera(&editorCamera.getCamera());
+
+            window.BeginFrame(sceneViewTarget, glm::vec4(0.055f, 0.070f, 0.095f, 1.0f));
+
+            renderer.BeginFrame();
+            renderer3D.BeginFrame();
+            renderer.SetViewportSize(static_cast<float>(sceneViewTarget.getWidth()), static_cast<float>(sceneViewTarget.getHeight()));
+            renderer3D.SetViewportSize(static_cast<float>(sceneViewTarget.getWidth()), static_cast<float>(sceneViewTarget.getHeight()));
+
+            editorScene.draw3D();
+            editorScene.draw2D();
+
+            SubmitSelectedObjectOutline(renderer3D, resources, editorScene, editorSelection);
+
+            // Opaque 3D geometry first, editor overlays second.
+            renderer3D.Render3D();
+            renderer.Render2D();
+
+            glm::vec4 gameClearColour(0.012f, 0.018f, 0.030f, 1.0f);
+
+            CameraComponent* gameOutputCamera = cameraSystem.resolvePrimaryCamera(editorScene, CameraOutputTarget::GameView);
+
+            if (gameOutputCamera != nullptr)
+            {
+                gameClearColour = gameOutputCamera->getClearColour();
+            }
+
+            renderer.SetActiveCamera(gameOutputCamera);
+            renderer3D.SetActiveCamera(gameOutputCamera);
+
+            window.BeginFrame(                gameViewTarget,
+                gameClearColour
+            );
+            renderer.BeginFrame();
+            renderer3D.BeginFrame();
+            renderer.SetViewportSize(static_cast<float>(gameViewTarget.getWidth()), static_cast<float>(gameViewTarget.getHeight()));
+            renderer3D.SetViewportSize(static_cast<float>(gameViewTarget.getWidth()),
+                static_cast<float>(gameViewTarget.getHeight())
+            );
+
+            editorScene.draw3D();
+            editorScene.draw2D();
+
+            // The Game View now uses the selected hierarchy camera.
+            renderer3D.Render3D();
+            renderer.Render2D();
+
+            // The backbuffer contains editor UI, so it must not
+            // alter either the Game View or Scene View camera.
+            renderer.SetActiveCamera(nullptr);
+            renderer3D.SetActiveCamera(nullptr);
+
+            window.BeginFrame({
+                0.035f,
+                0.040f,
+                0.050f,
+                1.0f
+            });
+
+            const EditorPlayMode modeBeforeEditorDraw = editorPlayState.getMode();
+
+            interface->draw();
+
+            const EditorPlayMode modeAfterEditorDraw = editorPlayState.getMode();
+
+            if (modeBeforeEditorDraw == EditorPlayMode::Edit && modeAfterEditorDraw == EditorPlayMode::Playing)
+            {
+                editorPlaySnapshot.capture(editorScene);
+            }
+            else if (modeBeforeEditorDraw != EditorPlayMode::Edit && modeAfterEditorDraw == EditorPlayMode::Edit)
+            {
+                editorPlaySnapshot.restore(editorScene);
+            }
+
+            window.Present();
+
+            frameDeltaMs = frameTimer.tock();
         }
     }
 
     delete interface;
     renderer.Renderer_Close();
-
+    renderer3D.Shutdown();
+    window.Shutdown();
     return 0;
 }

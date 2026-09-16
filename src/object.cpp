@@ -1,29 +1,112 @@
 #include "object.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
+
+#include <glm/gtc/quaternion.hpp>
+
+#include "colliderComponent.hpp"
+#include "spriteRendererComponent.hpp"
+#include "meshRendererComponent.hpp"
+
+namespace
+{
+    constexpr int DebugColliderRenderLayer = 9000;
+}
+
+Object::Object(
+    const std::string& objectName,
+    Resource_manager& resourceManager,
+    Renderer2D* objectRenderer,
+    Renderer3D* objectRenderer3D,
+    ObjectId requestedId
+)
+    : id(AcquireObjectId(requestedId)),
+      name(objectName),
+    renderer(objectRenderer),
+    renderer3D(objectRenderer3D)
+{
+    (void)resourceManager;
+}
+
+ObjectId Object::getId() const
+{
+    return id;
+}
+
+const std::string& Object::getName() const
+{
+    return name;
+}
+
+void Object::setName(const std::string& newName)
+{
+    name = newName;
+}
+
+bool Object::isActive() const
+{
+    return active;
+}
+
+void Object::setActive(bool value)
+{
+    active = value;
+}
+
+int Object::getLayer() const
+{
+    return layer;
+}
+
+bool Object::setLayer(int newLayer)
+{
+    if (newLayer < 0 || newLayer >= 32)
+    {
+        return false;
+    }
+
+    layer = newLayer;
+    return true;
+}
 
 Object::~Object()
 {
     for (const auto& pair : components)
     {
+        pair.second->destroy();
         delete pair.second;
     }
 
     for (Object* child : child_Objects)
     {
+        child->parentObject = nullptr;
         delete child;
     }
 }
 
 void Object::update(std::uint64_t deltaTime)
 {
+    if (!active)
+    {
+        return;
+    }
+
     Update(deltaTime);
 
     for (const auto& pair : components)
     {
+        pair.second->preUpdate(deltaTime);
+    }
+
+    for (const auto& pair : components)
+    {
         pair.second->update(deltaTime);
+    }
+
+    for (const auto& pair : components)
+    {
+        pair.second->postUpdate(deltaTime);
     }
 
     for (Object* child : child_Objects)
@@ -32,77 +115,86 @@ void Object::update(std::uint64_t deltaTime)
     }
 }
 
-void Object::draw(Renderer* r)
+void Object::draw2D(Renderer2D* r)
 {
+
+    if (!active)
+    {
+        return;
+    }
+
     if (r == nullptr)
     {
         std::fprintf(stderr, "ERROR: Renderer is null in Object::draw().\n");
         return;
     }
 
-    const float halfWidth = transform.getScale().x;
-    const float halfHeight = transform.getScale().y;
 
-    const glm::vec2 centre = transform.getPosition();
-    const float angle = transform.getRotation();
 
-    const float cosine = std::cos(angle);
-    const float sine = std::sin(angle);
+    const glm::vec4 normalisedColour = draw_colour / 255.0f;
+    const bool hasRendererComponent =
+        getComponent<SpriteRendererComponent>() != nullptr ||
+        getComponent<MeshRendererComponent>() != nullptr;
 
-    auto rotatePoint = [&](float localX, float localY) -> SDL_FPoint
-    {
-        return {
-            centre.x + (localX * cosine - localY * sine),
-            centre.y + (localX * sine + localY * cosine)
-        };
-    };
+    // if (
+    //     !hasRendererComponent &&
+    //     normalisedColour.a > 0.0f
+    // )
+    // {
+    //     const Transform2D worldDrawTransform = getWorldTransform().toTransform2D();
+    //     r->SubmitSolidQuad2D(
+    //         worldDrawTransform,
+    //         normalisedColour,
+    //         0,
+    //         layer
+    //     );
+    // }
 
-    const SDL_FPoint topLeft     = rotatePoint(-halfWidth, -halfHeight);
-    const SDL_FPoint topRight    = rotatePoint( halfWidth, -halfHeight);
-    const SDL_FPoint bottomRight = rotatePoint( halfWidth,  halfHeight);
-    const SDL_FPoint bottomLeft  = rotatePoint(-halfWidth,  halfHeight);
-
-    const SDL_Color fillColour = {
-        static_cast<Uint8>(draw_colour.r),
-        static_cast<Uint8>(draw_colour.g),
-        static_cast<Uint8>(draw_colour.b),
-        static_cast<Uint8>(draw_colour.a)
-    };
-
-    SDL_Vertex vertices[4] = {
-        { topLeft,     fillColour, { 0.0f, 0.0f } },
-        { topRight,    fillColour, { 1.0f, 0.0f } },
-        { bottomRight, fillColour, { 1.0f, 1.0f } },
-        { bottomLeft,  fillColour, { 0.0f, 1.0f } }
-    };
-
-    const int indices[6] = {
-        0, 1, 2,
-        0, 2, 3
-    };
-
-    SDL_RenderGeometry(
-        r->get_SDLRenderer(),
-        nullptr,
-        vertices,
-        4,
-        indices,
-        6
-    );
-
-    // Rendering is component-driven. A TextureComponent, for example, draws
-    // over the colour quad while sharing this object's physics transform.
+    // Rendering is component-driven. A SpriteRendererComponent draws from its
+    // own local draw rect while sharing this object's position and rotation.
     for (const auto& pair : components)
     {
-        pair.second->draw(r);
+        pair.second->draw2D(r);
     }
 
-    SDL_SetRenderDrawColor(r->get_SDLRenderer(), 20, 20, 24, 255);
+    
 
-    SDL_RenderDrawLineF(r->get_SDLRenderer(), topLeft.x, topLeft.y, topRight.x, topRight.y);
-    SDL_RenderDrawLineF(r->get_SDLRenderer(), topRight.x, topRight.y, bottomRight.x, bottomRight.y);
-    SDL_RenderDrawLineF(r->get_SDLRenderer(), bottomRight.x, bottomRight.y, bottomLeft.x, bottomLeft.y);
-    SDL_RenderDrawLineF(r->get_SDLRenderer(), bottomLeft.x, bottomLeft.y, topLeft.x, topLeft.y);
+#ifndef NDEBUG
+    if (ColliderComponent* collider = getComponent<ColliderComponent>())
+    {
+        Transform2D colliderTransform = getWorldTransform().toTransform2D();
+        colliderTransform.setScale(collider->getSizePixels() * 0.5f);
+        r->SubmitOutline2D(
+            colliderTransform,
+            glm::vec4(0.08f, 0.85f, 1.0f, 1.0f),
+            DebugColliderRenderLayer,
+            layer
+        );
+    }
+#endif
+
+    for (Object* child : child_Objects)
+    {
+        child->draw2D(r);
+    }
+}
+
+void Object::draw3D(Renderer3D* r)
+{
+    if (!active || r == nullptr)
+    {
+        return;
+    }
+
+    for (const auto& pair : components)
+    {
+        pair.second->draw3D(r);
+    }
+
+    for (Object* child : child_Objects)
+    {
+        child->draw3D(r);
+    }
 }
 
 Component* Object::add_Component(Component* component)
@@ -111,17 +203,53 @@ Component* Object::add_Component(Component* component)
     {
         return nullptr;
     }
-
-    const auto existing = components.find(component->name);
+    const auto existing = components.find(component->getTypeName());
     if (existing != components.end())
     {
+        existing->second->destroy();
         delete existing->second;
+
         existing->second = component;
+        component->create();
         return component;
     }
 
-    components[component->name] = component;
+    components[component->getTypeName()] = component;
+    component->create();
     return component;
+}
+
+std::size_t Object::getComponentCount() const
+{
+    return components.size();
+}
+
+Component* Object::getComponentAt(std::size_t index) const
+{
+    if (index >= components.size())
+    {
+        return nullptr;
+    }
+
+    auto iterator = components.begin();
+
+    for (std::size_t current = 0; current < index; ++current)
+    {
+        ++iterator;
+    }
+
+    return iterator->second;
+}
+
+Component* Object::getComponentByTypeName(
+    const std::string& typeName) const
+{
+    const auto found = components.find(typeName);
+    printf("Searching for component type: %s\n", typeName.c_str());
+    printf("Found component type: %s\n", found != components.end() ? found->second->getTypeName().c_str() : "null");
+    return found != components.end()
+        ? found->second
+        : nullptr;
 }
 
 int Object::remove_Component(Component* component)
@@ -131,7 +259,7 @@ int Object::remove_Component(Component* component)
         return -1;
     }
 
-    return remove_Component(component->name);
+    return remove_Component(component->getTypeName());
 }
 
 int Object::remove_Component(const std::string& componentName)
@@ -141,7 +269,7 @@ int Object::remove_Component(const std::string& componentName)
     {
         return -1;
     }
-
+    found->second->destroy();
     delete found->second;
     components.erase(found);
     return 0;
@@ -149,24 +277,140 @@ int Object::remove_Component(const std::string& componentName)
 
 int Object::add_Child_Object(Object* object)
 {
-    if (object == nullptr)
+    if (
+        object == nullptr ||
+        object == this ||
+        object->parentObject != nullptr
+    )
     {
         return -1;
     }
 
+    // Reject attaching one of our ancestors beneath us.
+    if (object->findInHierarchy(id) != nullptr)
+    {
+        return -1;
+    }
+
+    object->parentObject = this;
     child_Objects.push_back(object);
     return 0;
 }
 
+void Object::notifyTransformChanged()
+{
+    for (const auto& entry : components)
+    {
+        if (entry.second != nullptr)
+        {
+            entry.second->notifyTransformChanged();
+        }
+    }
+}
+
 int Object::remove_Child_Object(Object* object)
 {
-    const auto found = std::find(child_Objects.begin(), child_Objects.end(), object);
-    if (found == child_Objects.end())
+    Object* detached = detachChild(object);
+
+    if (detached == nullptr)
     {
         return -1;
     }
 
-    delete *found;
-    child_Objects.erase(found);
+    delete detached;
     return 0;
+}
+
+Object* Object::detachChild(Object* object)
+{
+    const auto found = std::find(
+        child_Objects.begin(),
+        child_Objects.end(),
+        object
+    );
+
+    if (found == child_Objects.end())
+    {
+        return nullptr;
+    }
+
+    Object* detached = *found;
+
+    child_Objects.erase(found);
+    detached->parentObject = nullptr;
+
+    return detached;
+}
+
+Object* Object::getParentObject() const
+{
+    return parentObject;
+}
+
+std::size_t Object::getChildCount() const
+{
+    return child_Objects.size();
+}
+
+Object* Object::getChild(std::size_t index) const
+{
+    if (index >= child_Objects.size())
+    {
+        return nullptr;
+    }
+
+    return child_Objects[index];
+}
+
+Object* Object::findInHierarchy(ObjectId objectId)
+{
+    if (id == objectId)
+    {
+        return this;
+    }
+
+    for (Object* child : child_Objects)
+    {
+        if (Object* found = child->findInHierarchy(objectId))
+        {
+            return found;
+        }
+    }
+
+    return nullptr;
+}
+
+glm::mat4 Object::getWorldMatrix() const
+{
+    const glm::mat4 localMatrix =
+        transform.getModelMatrix();
+
+    return parentObject != nullptr
+        ? parentObject->getWorldMatrix() * localMatrix
+        : localMatrix;
+}
+
+Transform3D Object::getWorldTransform() const
+{
+    Transform3D result;
+    result.setFromMatrix(getWorldMatrix());
+    return result;
+}
+
+glm::vec3 Object::getWorldPosition() const
+{
+    return glm::vec3(getWorldMatrix()[3]);
+}
+
+glm::quat Object::getWorldRotation() const
+{
+    if (parentObject == nullptr)
+    {
+        return transform.getRotation();
+    }
+
+    return glm::normalize(
+        parentObject->getWorldRotation() *
+        transform.getRotation()
+    );
 }

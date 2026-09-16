@@ -1,29 +1,62 @@
-#ifndef SCENE_H
-#define SCENE_H
+#pragma once
 
-#include <SDL.h>
-#include <vector>
+#include "engineApi.hpp"
+#include "objectId.hpp"
 
-typedef struct {
-    SDL_Texture* tileset_piece;
-    float x, y;
-} tile;
+#include <cstddef>
+#include <cstdint>
+#include <cmath>
+#include <memory>
+#include <string>
 
+class Object;
+class Renderer2D;
+class Renderer3D;
+class Resource_manager;
 
-class scene{
+class Scene
+{
+public:
+    ENGINE_API Scene(
+        Resource_manager& resources,
+        Renderer2D& renderer,
+        Renderer3D& renderer3D
+    );
 
-    private:
+    ENGINE_API ~Scene();
 
-        std::vector<std::vector<tile>> tile_map;
-        int tileTexture;
+    Scene(const Scene&) = delete;
+    Scene& operator=(const Scene&) = delete;
+    Scene(Scene&&) = delete;
+    Scene& operator=(Scene&&) = delete;
 
-    public:
+    ENGINE_API Object* createObject(
+        const std::string& name,
+        ObjectId requestedId = InvalidObjectId
+    );
 
-        scene();
+    ENGINE_API Object* createChildObject(
+        ObjectId parentId,
+        const std::string& name,
+        ObjectId requestedId = InvalidObjectId
+    );
 
-        ~scene();
+    ENGINE_API bool destroyObject(ObjectId objectId);
+    /// Changes an object's parent.
+    ///
+    /// Pass InvalidObjectId as newParentId to make the object a root.
+    /// When keepWorldTransform is true, the visible world transform is preserved.
+    ENGINE_API bool reparentObject(ObjectId objectId, ObjectId newParentId, bool keepWorldTransform = true);
+    ENGINE_API Object* findObject(ObjectId objectId);
 
+    ENGINE_API std::size_t getRootObjectCount() const;
+    ENGINE_API Object* getRootObject(std::size_t index) const;
+
+    ENGINE_API void update(std::uint64_t deltaTime);
+    ENGINE_API void draw2D();
+    ENGINE_API void draw3D();
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl;
 };
-
-    #endif // SCENE_H
-

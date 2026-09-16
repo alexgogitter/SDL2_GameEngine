@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with TexturePacker https://www.codeandweb.com/texturepacker -->
+<!-- $TexturePacker:SmartUpdate:420a45466446751b470fa87fd7269c89:abe0aeff833314803b5d0c910c4a3adb:d186d0fad2a5a01f611186cbf0deb80d$ -->
+<!--Format:
+n  => name of the sprite
+x  => sprite x pos in texture
+y  => sprite y pos in texture
+w  => sprite width (may be trimmed)
+h  => sprite height (may be trimmed)
+pX => x pos of the pivot point (relative to sprite width)
+pY => y pos of the pivot point (relative to sprite height)
+oX => sprite's x-corner offset (only available if trimmed)
+oY => sprite's y-corner offset (only available if trimmed)
+oW => sprite's original width (only available if trimmed)
+oH => sprite's original height (only available if trimmed)
+r => 'y' only set if sprite is rotated
+with polygon mode enabled:
+vertices   => points in sprite coordinate system (x0,y0,x1,y1,x2,y2, ...)
+verticesUV => points in sheet coordinate system (x0,y0,x1,y1,x2,y2, ...)
+triangles  => sprite triangulation, 3 vertex indices per triangle
+-->
+<TextureAtlas imagePath="Drone_Forward.png" width="896" height="3072">
+    <sprite n="Alpha0001_0" x="0" y="0" w="128" h="128"/>
+    <sprite n="Alpha0001_15" x="128" y="0" w="128" h="128"/>
+    <sprite n="Alpha0001_30" x="256" y="0" w="128" h="128"/>
+    <sprite n="Alpha0001_45" x="384" y="0" w="128" h="128"/>
+    <sprite n="Alpha0001_60" x="512" y="0" w="128" h="128"/>
+    <sprite n="Alpha0001_75" x="640" y="0" w="128" h="128"/>
+    <sprite n="Alpha0001_90" x="768" y="0" w="128" h="128"/>
+    <sprite n="Alpha0003_0" x="0" y="128" w="128" h="128"/>
+    <sprite n="Alpha0003_15" x="128" y="128" w="128" h="128"/>
+    <sprite n="Alpha0003_30" x="256" y="128" w="128" h="128"/>
+    <sprite n="Alpha0003_45" x="384" y="128" w="128" h="128"/>
+    <sprite n="Alpha0003_60" x="512" y="128" w="128" h="128"/>
+    <sprite n="Alpha0003_75" x="640" y="128" w="128" h="128"/>
+    <sprite n="Alpha0003_90" x="768" y="128" w="128" h="128"/>
+    <sprite n="Alpha0005_0" x="0" y="256" w="128" h="128"/>
+    <sprite n="Alpha0005_15" x="128" y="256" w="128" h="128"/>
+    <sprite n="Alpha0005_30" x="256" y="256" w="128" h="128"/>
+    <sprite n="Alpha0005_45" x="384" y="256" w="128" h="128"/>
+    <sprite n="Alpha0005_60" x="512" y="256" w="128" h="128"/>
+    <sprite n="Alpha0005_75" x="640" y="256" w="128" h="128"/>
+    <sprite n="Alpha0005_90" x="768" y="256" w="128" h="128"/>
+    <sprite n="Alpha0007_0" x="0" y="384" w="128" h="128"/>
+    <sprite n="Alpha0007_15" x="128" y="384" w="128" h="128"/>
+    <sprite n="Alpha0007_30" x="256" y="384" w="128" h="128"/>
+    <sprite n="Alpha0007_45" x="384" y="384" w="128" h="128"/>
+    <sprite n="Alpha0007_60" x="512" y="384" w="128" h="128"/>
+    <sprite n="Alpha0007_75" x="640" y="384" w="128" h="128"/>
+    <sprite n="Alpha0007_90" x="768" y="384" w="128" h="128"/>
+    <sprite n="Alpha0009_0" x="0" y="512" w="128" h="128"/>
+    <sprite n="Alpha0009_15" x="128" y="512" w="128" h="128"/>
+    <sprite n="Alpha0009_30" x="256" y="512" w="128" h="128"/>
+    <sprite n="Alpha0009_45" x="384" y="512" w="128" h="128"/>
+    <sprite n="Alpha0009_60" x="512" y="512" w="128" h="128"/>
+    <sprite n="Alpha0009_75" x="640" y="512" w="128" h="128"/>
+    <sprite n="Alpha0009_90" x="768" y="512" w="128" h="128"/>
+    <sprite n="Alpha0011_0" x="0" y="640" w="128" h="128"/>
+    <sprite n="Alpha0011_15" x="128" y="640" w="128" h="128"/>
+    <sprite n="Alpha0011_30" x="256" y="640" w="128" h="128"/>
+    <sprite n="Alpha0011_45" x="384" y="640" w="128" h="128"/>
+    <sprite n="Alpha0011_60" x="512" y="640" w="128" h="128"/>
+    <sprite n="Alpha0011_75" x="640" y="640" w="128" h="128"/>
+    <sprite n="Alpha0011_90" x="768" y="640" w="128" h="128"/>
+    <sprite n="Diffuse0001_0" x="0" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0001_15" x="128" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0001_30" x="256" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0001_45" x="384" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0001_60" x="512" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0001_75" x="640" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0001_90" x="768" y="768" w="128" h="128"/>
+    <sprite n="Diffuse0003_0" x="0" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0003_15" x="128" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0003_30" x="256" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0003_45" x="384" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0003_60" x="512" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0003_75" x="640" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0003_90" x="768" y="896" w="128" h="128"/>
+    <sprite n="Diffuse0005_0" x="0" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0005_15" x="128" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0005_30" x="256" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0005_45" x="384" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0005_60" x="512" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0005_75" x="640" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0005_90" x="768" y="1024" w="128" h="128"/>
+    <sprite n="Diffuse0007_0" x="0" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0007_15" x="128" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0007_30" x="256" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0007_45" x="384" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0007_60" x="512" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0007_75" x="640" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0007_90" x="768" y="1152" w="128" h="128"/>
+    <sprite n="Diffuse0009_0" x="0" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0009_15" x="128" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0009_30" x="256" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0009_45" x="384" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0009_60" x="512" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0009_75" x="640" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0009_90" x="768" y="1280" w="128" h="128"/>
+    <sprite n="Diffuse0011_0" x="0" y="1408" w="128" h="128"/>
+    <sprite n="Diffuse0011_15" x="128" y="1408" w="128" h="128"/>
+    <sprite n="Diffuse0011_30" x="256" y="1408" w="128" h="128"/>
+    <sprite n="Diffuse0011_45" x="384" y="1408" w="128" h="128"/>
+    <sprite n="Diffuse0011_60" x="512" y="1408" w="128" h="128"/>
+    <sprite n="Diffuse0011_75" x="640" y="1408" w="128" h="128"/>
+    <sprite n="Diffuse0011_90" x="768" y="1408" w="128" h="128"/>
+    <sprite n="Image0001_0" x="0" y="1536" w="128" h="128"/>
+    <sprite n="Image0001_15" x="128" y="1536" w="128" h="128"/>
+    <sprite n="Image0001_30" x="256" y="1536" w="128" h="128"/>
+    <sprite n="Image0001_45" x="384" y="1536" w="128" h="128"/>
+    <sprite n="Image0001_60" x="512" y="1536" w="128" h="128"/>
+    <sprite n="Image0001_75" x="640" y="1536" w="128" h="128"/>
+    <sprite n="Image0001_90" x="768" y="1536" w="128" h="128"/>
+    <sprite n="Image0003_0" x="0" y="1664" w="128" h="128"/>
+    <sprite n="Image0003_15" x="128" y="1664" w="128" h="128"/>
+    <sprite n="Image0003_30" x="256" y="1664" w="128" h="128"/>
+    <sprite n="Image0003_45" x="384" y="1664" w="128" h="128"/>
+    <sprite n="Image0003_60" x="512" y="1664" w="128" h="128"/>
+    <sprite n="Image0003_75" x="640" y="1664" w="128" h="128"/>
+    <sprite n="Image0003_90" x="768" y="1664" w="128" h="128"/>
+    <sprite n="Image0005_0" x="0" y="1792" w="128" h="128"/>
+    <sprite n="Image0005_15" x="128" y="1792" w="128" h="128"/>
+    <sprite n="Image0005_30" x="256" y="1792" w="128" h="128"/>
+    <sprite n="Image0005_45" x="384" y="1792" w="128" h="128"/>
+    <sprite n="Image0005_60" x="512" y="1792" w="128" h="128"/>
+    <sprite n="Image0005_75" x="640" y="1792" w="128" h="128"/>
+    <sprite n="Image0005_90" x="768" y="1792" w="128" h="128"/>
+    <sprite n="Image0007_0" x="0" y="1920" w="128" h="128"/>
+    <sprite n="Image0007_15" x="128" y="1920" w="128" h="128"/>
+    <sprite n="Image0007_30" x="256" y="1920" w="128" h="128"/>
+    <sprite n="Image0007_45" x="384" y="1920" w="128" h="128"/>
+    <sprite n="Image0007_60" x="512" y="1920" w="128" h="128"/>
+    <sprite n="Image0007_75" x="640" y="1920" w="128" h="128"/>
+    <sprite n="Image0007_90" x="768" y="1920" w="128" h="128"/>
+    <sprite n="Image0009_0" x="0" y="2048" w="128" h="128"/>
+    <sprite n="Image0009_15" x="128" y="2048" w="128" h="128"/>
+    <sprite n="Image0009_30" x="256" y="2048" w="128" h="128"/>
+    <sprite n="Image0009_45" x="384" y="2048" w="128" h="128"/>
+    <sprite n="Image0009_60" x="512" y="2048" w="128" h="128"/>
+    <sprite n="Image0009_75" x="640" y="2048" w="128" h="128"/>
+    <sprite n="Image0009_90" x="768" y="2048" w="128" h="128"/>
+    <sprite n="Image0011_0" x="0" y="2176" w="128" h="128"/>
+    <sprite n="Image0011_15" x="128" y="2176" w="128" h="128"/>
+    <sprite n="Image0011_30" x="256" y="2176" w="128" h="128"/>
+    <sprite n="Image0011_45" x="384" y="2176" w="128" h="128"/>
+    <sprite n="Image0011_60" x="512" y="2176" w="128" h="128"/>
+    <sprite n="Image0011_75" x="640" y="2176" w="128" h="128"/>
+    <sprite n="Image0011_90" x="768" y="2176" w="128" h="128"/>
+    <sprite n="Normal0001_0" x="0" y="2304" w="128" h="128"/>
+    <sprite n="Normal0001_15" x="128" y="2304" w="128" h="128"/>
+    <sprite n="Normal0001_30" x="256" y="2304" w="128" h="128"/>
+    <sprite n="Normal0001_45" x="384" y="2304" w="128" h="128"/>
+    <sprite n="Normal0001_60" x="512" y="2304" w="128" h="128"/>
+    <sprite n="Normal0001_75" x="640" y="2304" w="128" h="128"/>
+    <sprite n="Normal0001_90" x="768" y="2304" w="128" h="128"/>
+    <sprite n="Normal0003_0" x="0" y="2432" w="128" h="128"/>
+    <sprite n="Normal0003_15" x="128" y="2432" w="128" h="128"/>
+    <sprite n="Normal0003_30" x="256" y="2432" w="128" h="128"/>
+    <sprite n="Normal0003_45" x="384" y="2432" w="128" h="128"/>
+    <sprite n="Normal0003_60" x="512" y="2432" w="128" h="128"/>
+    <sprite n="Normal0003_75" x="640" y="2432" w="128" h="128"/>
+    <sprite n="Normal0003_90" x="768" y="2432" w="128" h="128"/>
+    <sprite n="Normal0005_0" x="0" y="2560" w="128" h="128"/>
+    <sprite n="Normal0005_15" x="128" y="2560" w="128" h="128"/>
+    <sprite n="Normal0005_30" x="256" y="2560" w="128" h="128"/>
+    <sprite n="Normal0005_45" x="384" y="2560" w="128" h="128"/>
+    <sprite n="Normal0005_60" x="512" y="2560" w="128" h="128"/>
+    <sprite n="Normal0005_75" x="640" y="2560" w="128" h="128"/>
+    <sprite n="Normal0005_90" x="768" y="2560" w="128" h="128"/>
+    <sprite n="Normal0007_0" x="0" y="2688" w="128" h="128"/>
+    <sprite n="Normal0007_15" x="128" y="2688" w="128" h="128"/>
+    <sprite n="Normal0007_30" x="256" y="2688" w="128" h="128"/>
+    <sprite n="Normal0007_45" x="384" y="2688" w="128" h="128"/>
+    <sprite n="Normal0007_60" x="512" y="2688" w="128" h="128"/>
+    <sprite n="Normal0007_75" x="640" y="2688" w="128" h="128"/>
+    <sprite n="Normal0007_90" x="768" y="2688" w="128" h="128"/>
+    <sprite n="Normal0009_0" x="0" y="2816" w="128" h="128"/>
+    <sprite n="Normal0009_15" x="128" y="2816" w="128" h="128"/>
+    <sprite n="Normal0009_30" x="256" y="2816" w="128" h="128"/>
+    <sprite n="Normal0009_45" x="384" y="2816" w="128" h="128"/>
+    <sprite n="Normal0009_60" x="512" y="2816" w="128" h="128"/>
+    <sprite n="Normal0009_75" x="640" y="2816" w="128" h="128"/>
+    <sprite n="Normal0009_90" x="768" y="2816" w="128" h="128"/>
+    <sprite n="Normal0011_0" x="0" y="2944" w="128" h="128"/>
+    <sprite n="Normal0011_15" x="128" y="2944" w="128" h="128"/>
+    <sprite n="Normal0011_30" x="256" y="2944" w="128" h="128"/>
+    <sprite n="Normal0011_45" x="384" y="2944" w="128" h="128"/>
+    <sprite n="Normal0011_60" x="512" y="2944" w="128" h="128"/>
+    <sprite n="Normal0011_75" x="640" y="2944" w="128" h="128"/>
+    <sprite n="Normal0011_90" x="768" y="2944" w="128" h="128"/>
+</TextureAtlas>

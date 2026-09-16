@@ -46,7 +46,7 @@ fpsCounter::~fpsCounter()
 // }
 
 // To be called each frame
-void fpsCounter::update(Renderer* r, std::string text)
+void fpsCounter::update(Renderer2D* r, std::string text)
 {
     r->Renderer_ttf(text, fpsFont, src, dest, *fpsColor);
 }

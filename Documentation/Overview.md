@@ -1,152 +1,207 @@
-# Codebase Overview
+# Engine Architecture Overview
 
-This project is a small SDL2-based game engine prototype. The current codebase is organized around a simple frame loop, a renderer wrapper, a resource manager, an immediate-mode UI layer built on ImGui, and a lightweight object/component system.
+The project is an SDL2 game-engine prototype with an OpenGL 3.3 graphics
+backend, Box2D physics, Dear ImGui tooling, cached resources, and an
+object/component model.
 
-## High-Level Flow
+SDL2 owns platform concerns. OpenGL owns rendering.
 
-`main.cpp` owns the application loop. The current flow is:
+## System Map
 
-1. Create the `Renderer` and initialize SDL, SDL_image, and SDL_ttf.
-2. Create the `Interface` wrapper for ImGui.
-3. Create a `Time` helper for frame timing.
-4. Create a `Resource_manager` for texture and font handles.
-5. Load a demo texture directly with SDL_image.
-6. Run the main loop:
-   - clear the frame
-   - compute delta time
-   - draw the demo texture
-   - process SDL events
-   - update FPS tracking
-   - render ImGui callbacks through `Interface`
-   - present the frame
+```text
+SDL2
+  window, events, timing, image/font decoding
+       |
+       v
+Renderer ---------------- Camera
+  OpenGL context           Camera2D / Camera3D
+  shaders
+  render queues
+  lights
+       ^
+       |
+Object ---- Transform2D <---- RigidbodyComponent <---- Box2D
+  |
+  +-- ColliderComponent
+  +-- SpriteRendererComponent ---- Resource_manager ---- OpenGL textures
+  +-- AnimationControllerComponent
+  +-- Light2DComponent
+  +-- child Objects
 
-## Subsystems
-
-### Renderer
-
-The `Renderer` class wraps SDL window and renderer creation. It also initializes the graphics-related SDL subsystems used by the project.
-
-Key responsibilities:
-
-- create the window and renderer
-- initialize SDL, SDL_image, and SDL_ttf
-- expose `SDL_Window*` and `SDL_Renderer*` accessors
-- render text via `Renderer_ttf`
-- present frames
-
-Current notes:
-
-- `Renderer_Init()` creates the window with the configured title and dimensions.
-- `Renderer_ttf()` renders text to a texture and draws it to the supplied destination rectangle.
-- `Renderer_Draw(Object*)` currently only presents the frame and does not render the object itself.
-
-### Resource Manager
-
-`Resource_manager` caches textures and fonts behind integer handles.
-
-Texture flow:
-
-- `loadTexture()` loads a texture from a file path and returns a handle.
-- `getTexture()` returns the cached texture pointer or reloads it if needed.
-- `deleteTexture()` destroys the SDL texture but keeps the handle and file path.
-
-Font flow:
-
-- `loadFont()` loads a font at a specific size and returns a handle.
-- `getFont()` returns the cached font pointer or reloads it if needed.
-- `deleteFont()` closes the SDL_ttf font but keeps the cached metadata.
-
-Bulk helpers:
-
-- `loadTextures()` preloads a list of textures.
-- `loadFonts()` preloads a list of fonts.
-- `loadLevelResources()` preloads a texture and font set for a level.
-
-### ImGui Interface
-
-`Interface` owns the ImGui SDL2 and SDLRenderer2 backends.
-
-Responsibilities:
-
-- create and destroy the ImGui context
-- forward SDL events into ImGui with `update()`
-- register draw callbacks through `addDrawCallback()`
-- begin a new ImGui frame and render registered callbacks in `draw()`
-
-The current design lets the rest of the application register UI code without coupling that code directly to the ImGui frame lifecycle.
-
-### Time
-
-`Time` wraps `SDL_GetTicks64()` to provide frame timing values.
-
-It currently exposes:
-
-- `tick()` to mark the start of a timing interval
-- `tock()` to compute elapsed time since the last tick
-- `getElapsed()` to query the current elapsed duration
-
-The project now uses `std::uint64_t` consistently for timing values.
-
-### FPS Counter
-
-`fpsCounter` is a thin renderer helper that draws a text value, typically the FPS label, using the renderer and a font.
-
-Current behavior:
-
-- opens a default font from `res/fonts/comicz.ttf` in the default constructor
-- stores source and destination rectangles for the text draw call
-- calls `Renderer::Renderer_ttf()` from `update()`
-
-### Object and Component
-
-`Object` is the base entity container. It owns:
-
-- a texture handle resolved through `Resource_manager`
-- a collider rectangle
-- child objects
-- components
-
-`Object::update()` runs the virtual `Update()` override, then updates all components and children.
-
-`Component` is the base behavior unit attached to an `Object`. It declares a pure virtual `Update()` method and exposes a public `update()` entry point.
-
-### Scene, Camera, Shader, and Map Reader
-
-Several headers are currently present but mostly serve as placeholders or legacy scaffolding:
-
-- `scene.hpp` defines a basic tile struct and a scene container.
-- `camera.hpp` contains a commented-out camera implementation.
-- `shader.h` contains a commented-out OpenGL shader wrapper.
-- `mapReader.h` loads PNG data into a 2D color grid and contains map validation helpers.
-
-## File Map
-
-- `main.cpp`: application entry point and demo loop
-- `render.hpp` / `render.cpp`: SDL window, renderer, and text rendering wrapper
-- `resource_manager.hpp` / `resource_manager.cpp`: texture and font cache
-- `interfaceImplementation.hpp` / `interfaceImplementation.cpp`: ImGui integration
-- `time.hpp` / `time.cpp`: frame timing helpers
-- `fpsCounter.hpp` / `fpsCounter.cpp`: text-based FPS display helper
-- `object.hpp` / `object.cpp`: entity container and update propagation
-- `component.hpp` / `component.cpp`: component base class
-- `scene.hpp`: scene and tile placeholders
-- `mapReader.h`: image-based map loading and validation prototype
-- `shader.h`, `camera.hpp`: legacy OpenGL-era scaffolding
-
-## Build And Run
-
-The repository memory notes the primary build command as:
-
-```bash
-make
+ImGui Interface ---- SDL events + final OpenGL UI pass
 ```
 
-The project expects the SDL2, SDL2_image, SDL2_ttf, and ImGui dependencies bundled in the repository structure and linked by the build system.
+## Application Ownership
 
-## Maintenance Notes
+The current demo owns engine systems directly in `main.cpp`.
 
-- Prefer direct includes for shared core types and APIs instead of relying on transitive includes.
-- Avoid global definitions in headers unless they are intentionally `inline` or `constexpr`.
-- Keep ownership explicit for SDL objects, especially textures, fonts, and dynamically allocated rectangles.
-- Consider moving hardcoded asset paths into a config or resource manifest.
-- `mapReader.h` would be safer as a `.cpp` implementation file or a header with `inline` constants and declarations only.
+```text
+Renderer
+  Interface
+  Resource_manager
+  PhysicsWorld2D
+    gameObjects
+      Components
+  Camera2D
+```
+
+Destruction order matters:
+
+1. game objects destroy Box2D bodies and components
+2. physics world is destroyed
+3. resource manager deletes OpenGL textures and fonts
+4. ImGui deletes its OpenGL resources
+5. renderer deletes its GPU buffers, context, and window
+
+The actual declarations use nested scope and declaration order to achieve this.
+
+## Main Loop
+
+The current loop follows:
+
+```text
+start frame timer
+process SDL events
+handle gameplay input
+step Box2D fixed simulation
+begin renderer frame
+update objects and components
+submit object/component drawing
+execute 2D render queue
+draw ImGui
+swap OpenGL buffers
+record frame duration
+```
+
+Physics currently steps before object components synchronize transforms. That
+ensures rendering uses the latest completed Box2D state.
+
+## Coordinate and Unit Conventions
+
+### Rendering
+
+- 2D world X: right
+- 2D world Y: down
+- position unit: logical pixels
+- rotation unit: radians
+- `Transform2D::scale`: submitted-quad half-size for legacy/fallback draws
+- sprite draw rect: local visual rectangle owned by `SpriteRendererComponent`
+- collider rect: full physics size owned by `ColliderComponent`
+- material colours: linear 0..1
+- legacy `Object::draw_colour`: byte-style 0..255 values
+
+### Physics
+
+- Box2D operates in metres
+- `PhysicsWorld2D::PixelsPerMetre` is `100.0`
+- rigid-body helpers expose pixel-friendly APIs and convert internally
+
+### Lighting
+
+- point-light X/Y: 2D world pixels
+- point-light Z: pseudo-height above the sprite plane
+- radius: planar world pixels
+- normals: tangent-space OpenGL convention
+
+## Rendering Architecture
+
+Rendering is deferred at the command level, although the current lighting shader
+is a forward shader.
+
+`Object::draw()` does not immediately draw. It asks the renderer to store command
+data. Once the complete scene has submitted, `Render2D()` can sort commands and
+shade them using every light collected during the frame.
+
+This distinction matters:
+
+- command-deferred: CPU submissions are collected before GPU execution
+- deferred lighting: geometry first writes a G-buffer, then lights shade it
+
+The engine currently uses the first and may later add the second.
+
+## Resource Architecture
+
+Gameplay code stores stable `TextureHandle` values. `Resource_manager` maps those
+handles to OpenGL texture objects and preserves file metadata for reload.
+
+Material components resolve handles into `Material2DRenderState` only while
+submitting. This keeps material configuration separate from backend GPU IDs.
+
+## Component Architecture
+
+Components combine behavior through composition:
+
+- `RigidbodyComponent`: owns and synchronizes a Box2D body
+- `ColliderComponent`: owns physics shape size/configuration attached to a rigid body
+- `SpriteRendererComponent`: owns 2D material configuration and visual draw rect
+- `AnimationControllerComponent`: updates sprite atlas frames and state transitions
+- `Light2DComponent`: owns a point-light configuration
+
+`PhysicsBoxObject` is a convenience type that creates rigid-body and collider
+components together.
+
+Components and children use ownership transfer into `Object`. See
+[Components](/Documentation/Components.md) before adding or removing them.
+
+## Current Rendering Model
+
+The shader supports:
+
+- untextured colour quads
+- albedo and alpha
+- diffuse/roughness response
+- tangent-space normal maps
+- pseudo-height maps
+- emission maps
+- specular/shiny response
+- ambient light
+- up to sixteen point lights
+- unlit materials
+- stable integer render layers
+
+It does not yet support shadows, metalness, a physically based BRDF, HDR,
+post-processing, sprite-sheet source rectangles, or 3D meshes.
+
+## Camera Architecture
+
+`Renderer` depends on the abstract `Camera` interface. `Camera2D` supplies the
+current orthographic projection and screen-to-world conversion. `Camera3D`
+supplies valid perspective matrices for a future mesh pass.
+
+The renderer holds a non-owning pointer to one active camera.
+
+## ImGui Architecture
+
+The `Interface` singleton owns the ImGui context and GPU resources. SDL events
+go through the official SDL2 platform backend. The engine uses a small custom
+OpenGL renderer for ImGui draw lists.
+
+ImGui is drawn after the world, so UI does not participate in scene lighting.
+
+## Source Map
+
+| Area | Main files |
+|---|---|
+| Window and OpenGL renderer | `render.hpp`, `render.cpp` |
+| Shader wrapper | `shader.hpp`, `shader.cpp` |
+| Sprite GLSL | `res/shaders/sprite2d.vert`, `sprite2d.frag` |
+| Cameras | `camera.hpp`, `camera2D.*`, `camera3D.*` |
+| Materials and lights | `material2D.hpp`, `lighting2D.hpp` |
+| Render components | `spriteRendererComponent.*`, `light2DComponent.*` |
+| Resource cache | `resource_manager.*` |
+| Entity composition | `object.*`, `component.*`, `transform.hpp` |
+| Physics | `physicsWorld2D.*`, `rigidbodyComponent.*`, `colliderComponent.*` |
+| ImGui | `interfaceImplementation.*` |
+| Demo loop | `main.cpp` |
+
+## Design Direction
+
+Preserve these boundaries as the engine grows:
+
+- SDL remains the platform layer.
+- Components describe scene intent and submit data.
+- Renderer passes own API-specific GPU work.
+- Resource handles hide GPU object names from gameplay code.
+- 2D and 3D use separate transforms, materials and queues.
+- Blender workflows produce versioned runtime assets, not direct `.blend` loads.
+- Documentation and IntelliSense comments change with the APIs they describe.

@@ -1,240 +1,579 @@
 #include "resource_manager.hpp"
 
-#include <stdio.h>
+#include <cstdio>
+
+#include <SDL.h>
+#include <SDL_image.h>
+#include <glad/glad.h>
 
 namespace
 {
-    SDL_Texture* loadTextureFromPath(SDL_Renderer* renderer, const std::string& file_path)
+    unsigned int loadTextureFromPath(
+        const std::string& filePath,
+        TextureColourSpace colourSpace,
+        int& width,
+        int& height)
     {
-        SDL_Surface* surface = IMG_Load(file_path.c_str());
-        if (!surface)
+        SDL_Surface* loadedSurface = IMG_Load(filePath.c_str());
+        if (loadedSurface == nullptr)
         {
-            fprintf(stderr, "ERROR: Unable to load %s. SDL_ERROR: %s\n", file_path.c_str(), IMG_GetError());
-            return nullptr;
+            std::fprintf(
+                stderr,
+                "ERROR: Unable to load %s: %s\n",
+                filePath.c_str(),
+                IMG_GetError()
+            );
+            return 0;
         }
 
-        SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-        if (!texture)
+        SDL_Surface* surface = SDL_ConvertSurfaceFormat(
+            loadedSurface,
+            SDL_PIXELFORMAT_RGBA32,
+            0
+        );
+        SDL_FreeSurface(loadedSurface);
+        if (surface == nullptr)
         {
-            fprintf(stderr, "ERROR: Unable to create texture from %s. SDL_ERROR: %s\n", file_path.c_str(), SDL_GetError());
+            std::fprintf(stderr, "ERROR: Unable to convert %s to RGBA32.\n", filePath.c_str());
+            return 0;
         }
+
+        width = surface->w;
+        height = surface->h;
+
+        unsigned int texture = 0;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            colourSpace == TextureColourSpace::SRGB ? GL_SRGB8_ALPHA8 : GL_RGBA8,
+            width,
+            height,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            surface->pixels
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         SDL_FreeSurface(surface);
         return texture;
     }
 
-    TTF_Font* loadFontFromPath(const std::string& file_path, int font_size)
+    TTF_Font* loadFontFromPath(const std::string& filePath, int fontSize)
     {
-        TTF_Font* font = TTF_OpenFont(file_path.c_str(), font_size);
-        if (!font)
+        TTF_Font* font = TTF_OpenFont(filePath.c_str(), fontSize);
+        if (font == nullptr)
         {
-            fprintf(stderr, "ERROR: Unable to load %s. SDL_ERROR: %s\n", file_path.c_str(), TTF_GetError());
+            std::fprintf(
+                stderr,
+                "ERROR: Unable to load %s: %s\n",
+                filePath.c_str(),
+                TTF_GetError()
+            );
         }
-
         return font;
     }
 }
 
-Resource_manager::Resource_manager()
-    : gRenderer(nullptr), nextTextureId(0), nextFontId(0)
-{
-}
+Resource_manager::Resource_manager() = default;
 
-Resource_manager::Resource_manager(SDL_Renderer* ren)
-    : gRenderer(ren), nextTextureId(0), nextFontId(0)
+Resource_manager::~Resource_manager()
 {
-}
-
-std::string Resource_manager::makeFontKey(const std::string& file_path, int font_size)
-{
-    return file_path + "#" + std::to_string(font_size);
-}
-
-unsigned int Resource_manager::loadTexture(const char * f_path)
-{
-    if (!f_path)
+    for (auto& pair : meshes)
     {
-        fprintf(stderr, "ERROR: Unable to load texture from a null path.\n");
-        return -1;
+        deleteMesh(pair.first);
     }
 
-    std::string file_path = f_path;
-    auto cached_texture = texture_ids_by_path.find(file_path);
-    if (cached_texture != texture_ids_by_path.end())
+    for (auto& pair : textures)
     {
-        auto texture_it = textures.find(cached_texture->second);
-        if (texture_it != textures.end() && texture_it->second.texture)
+        if (pair.second.gpuTexture != 0)
         {
-            return cached_texture->second;
+            glDeleteTextures(1, &pair.second.gpuTexture);
+        }
+    }
+
+    for (auto& pair : fonts)
+    {
+        if (pair.second.font != nullptr)
+        {
+            TTF_CloseFont(pair.second.font);
+        }
+    }
+}
+
+std::string Resource_manager::makeTextureKey(
+    const std::string& filePath,
+    TextureColourSpace colourSpace)
+{
+    return filePath + (colourSpace == TextureColourSpace::SRGB ? "#srgb" : "#linear");
+}
+
+std::string Resource_manager::makeFontKey(const std::string& filePath, int fontSize)
+{
+    return filePath + "#" + std::to_string(fontSize);
+}
+
+TextureHandle Resource_manager::loadTexture(
+    const char* filePathPointer,
+    TextureColourSpace colourSpace)
+{
+    if (filePathPointer == nullptr)
+    {
+        return InvalidTextureHandle;
+    }
+
+    const std::string filePath = filePathPointer;
+    const std::string key = makeTextureKey(filePath, colourSpace);
+    const auto cached = textureIdsByKey.find(key);
+    if (cached != textureIdsByKey.end())
+    {
+        texture_info& info = textures[cached->second];
+        if (info.gpuTexture == 0)
+        {
+            info.gpuTexture = loadTextureFromPath(
+                info.file_path,
+                info.colourSpace,
+                info.width,
+                info.height
+            );
+        }
+        return info.gpuTexture != 0 ? cached->second : InvalidTextureHandle;
+    }
+
+    texture_info info;
+    info.file_path = filePath;
+    info.colourSpace = colourSpace;
+    info.gpuTexture = loadTextureFromPath(
+        filePath,
+        colourSpace,
+        info.width,
+        info.height
+    );
+    if (info.gpuTexture == 0)
+    {
+        return InvalidTextureHandle;
+    }
+
+    const TextureHandle textureId = nextTextureId++;
+    textures[textureId] = info;
+    textureIdsByKey[key] = textureId;
+    return textureId;
+}
+
+void Resource_manager::loadTextures(const std::vector<std::string>& filePaths)
+{
+    for (const std::string& filePath : filePaths)
+    {
+        loadTexture(filePath.c_str());
+    }
+}
+
+unsigned int Resource_manager::getTexture(TextureHandle textureId)
+{
+    const auto found = textures.find(textureId);
+    if (found == textures.end())
+    {
+        return 0;
+    }
+
+    texture_info& info = found->second;
+    if (info.gpuTexture == 0)
+    {
+        info.gpuTexture = loadTextureFromPath(
+            info.file_path,
+            info.colourSpace,
+            info.width,
+            info.height
+        );
+    }
+    return info.gpuTexture;
+}
+
+const texture_info* Resource_manager::getTextureInfo(TextureHandle textureId) const
+{
+    const auto found = textures.find(textureId);
+    return found != textures.end() ? &found->second : nullptr;
+}
+
+void Resource_manager::deleteTexture(TextureHandle textureId)
+{
+    const auto found = textures.find(textureId);
+    if (found != textures.end() && found->second.gpuTexture != 0)
+    {
+        glDeleteTextures(1, &found->second.gpuTexture);
+        found->second.gpuTexture = 0;
+    }
+}
+
+MeshHandle Resource_manager::loadBuiltInCubeMesh()
+{
+    constexpr const char* CubePath =
+        "builtin://cube";
+
+    const auto cached =
+        meshIdsByPath.find(CubePath);
+
+    if (cached != meshIdsByPath.end())
+    {
+        mesh_resource_info& mesh =
+            meshes[cached->second];
+
+        if (
+            mesh.vertexArray == 0 &&
+            !uploadMesh(mesh)
+        )
+        {
+            return InvalidMeshHandle;
         }
 
-        SDL_Texture* texture = loadTextureFromPath(gRenderer, file_path);
-        if (!texture)
-        {
-            return -1;
-        }
-
-        texture_it->second.texture = texture;
-        return cached_texture->second;
+        return cached->second;
     }
 
-    SDL_Texture* texture = loadTextureFromPath(gRenderer, file_path);
-    if (!texture)
+    mesh_resource_info mesh;
+    mesh.assetPath = CubePath;
+
+    mesh.vertices = {
+        // Front: +Z
+        {{-0.5f, -0.5f,  0.5f}, { 0,  0,  1}, {0, 0}},
+        {{ 0.5f, -0.5f,  0.5f}, { 0,  0,  1}, {1, 0}},
+        {{ 0.5f,  0.5f,  0.5f}, { 0,  0,  1}, {1, 1}},
+        {{-0.5f,  0.5f,  0.5f}, { 0,  0,  1}, {0, 1}},
+
+        // Back: -Z
+        {{ 0.5f, -0.5f, -0.5f}, { 0,  0, -1}, {0, 0}},
+        {{-0.5f, -0.5f, -0.5f}, { 0,  0, -1}, {1, 0}},
+        {{-0.5f,  0.5f, -0.5f}, { 0,  0, -1}, {1, 1}},
+        {{ 0.5f,  0.5f, -0.5f}, { 0,  0, -1}, {0, 1}},
+
+        // Right: +X
+        {{ 0.5f, -0.5f,  0.5f}, { 1,  0,  0}, {0, 0}},
+        {{ 0.5f, -0.5f, -0.5f}, { 1,  0,  0}, {1, 0}},
+        {{ 0.5f,  0.5f, -0.5f}, { 1,  0,  0}, {1, 1}},
+        {{ 0.5f,  0.5f,  0.5f}, { 1,  0,  0}, {0, 1}},
+
+        // Left: -X
+        {{-0.5f, -0.5f, -0.5f}, {-1,  0,  0}, {0, 0}},
+        {{-0.5f, -0.5f,  0.5f}, {-1,  0,  0}, {1, 0}},
+        {{-0.5f,  0.5f,  0.5f}, {-1,  0,  0}, {1, 1}},
+        {{-0.5f,  0.5f, -0.5f}, {-1,  0,  0}, {0, 1}},
+
+        // Top: +Y
+        {{-0.5f,  0.5f,  0.5f}, { 0,  1,  0}, {0, 0}},
+        {{ 0.5f,  0.5f,  0.5f}, { 0,  1,  0}, {1, 0}},
+        {{ 0.5f,  0.5f, -0.5f}, { 0,  1,  0}, {1, 1}},
+        {{-0.5f,  0.5f, -0.5f}, { 0,  1,  0}, {0, 1}},
+
+        // Bottom: -Y
+        {{-0.5f, -0.5f, -0.5f}, { 0, -1,  0}, {0, 0}},
+        {{ 0.5f, -0.5f, -0.5f}, { 0, -1,  0}, {1, 0}},
+        {{ 0.5f, -0.5f,  0.5f}, { 0, -1,  0}, {1, 1}},
+        {{-0.5f, -0.5f,  0.5f}, { 0, -1,  0}, {0, 1}}
+    };
+
+    for (std::uint32_t face = 0; face < 6; ++face)
     {
-        return -1;
+        const std::uint32_t start = face * 4;
+
+        mesh.indices.push_back(start + 0);
+        mesh.indices.push_back(start + 1);
+        mesh.indices.push_back(start + 2);
+
+        mesh.indices.push_back(start + 2);
+        mesh.indices.push_back(start + 3);
+        mesh.indices.push_back(start + 0);
     }
 
-    unsigned int texture_id = nextTextureId++;
-    textures[texture_id] = texture_info{file_path, texture};
-    texture_ids_by_path[file_path] = texture_id;
-    return texture_id;
+    if (!uploadMesh(mesh))
+    {
+        return InvalidMeshHandle;
+    }
+
+    const MeshHandle handle = nextMeshId++;
+
+    meshes.emplace(handle, std::move(mesh));
+    meshIdsByPath.emplace(CubePath, handle);
+
+    return handle;
 }
 
-void Resource_manager::loadTextures(const std::vector<std::string>& f_paths)
+bool Resource_manager::isMeshValid(
+    MeshHandle mesh
+) const
 {
-    for (const auto& file_path : f_paths)
-    {
-        loadTexture(file_path.c_str());
-    }
+    const auto found = meshes.find(mesh);
+
+    return
+        found != meshes.end() &&
+        found->second.vertexArray != 0 &&
+        !found->second.indices.empty();
 }
 
-
-SDL_Texture* Resource_manager::getTexture(unsigned int texture_ID)
+const char* Resource_manager::getMeshAssetPath(
+    MeshHandle mesh
+) const
 {
-    auto texture_it = textures.find(texture_ID);
-    if (texture_it == textures.end())
-    {
-        fprintf(stderr, "ERROR: Invalid texture handle: %u.\n", texture_ID);
-        return nullptr;
-    }
+    const auto found = meshes.find(mesh);
 
-    if (texture_it->second.texture)
-    {
-        return texture_it->second.texture;
-    }
-
-    fprintf(stdout, "COULD NOT MOUNT TEXTURE FROM HANDLE. RELOADING\n");
-
-    SDL_Texture* texture = loadTextureFromPath(gRenderer, texture_it->second.file_path);
-    if (!texture)
-    {
-        return nullptr;
-    }
-
-    texture_it->second.texture = texture;
-    return texture;
+    return found != meshes.end()
+        ? found->second.assetPath.c_str()
+        : "";
 }
 
-void Resource_manager::deleteTexture(unsigned int texture_ID)
+std::size_t Resource_manager::getMeshVertexCount(
+    MeshHandle mesh
+) const
 {
-    auto texture_it = textures.find(texture_ID);
-    if (texture_it == textures.end())
+    const auto found = meshes.find(mesh);
+
+    return found != meshes.end()
+        ? found->second.vertices.size()
+        : 0;
+}
+
+std::size_t Resource_manager::getMeshIndexCount(
+    MeshHandle mesh
+) const
+{
+    const auto found = meshes.find(mesh);
+
+    return found != meshes.end()
+        ? found->second.indices.size()
+        : 0;
+}
+
+bool Resource_manager::getMeshRenderState(
+    MeshHandle mesh,
+    MeshRenderState& renderState
+) const
+{
+    renderState = {};
+
+    const auto found = meshes.find(mesh);
+
+    if (
+        found == meshes.end() ||
+        found->second.vertexArray == 0 ||
+        found->second.indices.empty()
+    )
+    {
+        return false;
+    }
+
+    renderState.vertexArray =
+        found->second.vertexArray;
+
+    renderState.indexCount =
+        found->second.indices.size();
+
+    return true;
+}
+
+void Resource_manager::deleteMesh(
+    MeshHandle mesh
+)
+{
+    const auto found = meshes.find(mesh);
+
+    if (found == meshes.end())
     {
         return;
     }
 
-    if (texture_it->second.texture)
+    mesh_resource_info& resource = found->second;
+
+    if (resource.indexBuffer != 0)
     {
-        SDL_DestroyTexture(texture_it->second.texture);
-        texture_it->second.texture = nullptr;
+        glDeleteBuffers(1, &resource.indexBuffer);
+        resource.indexBuffer = 0;
+    }
+
+    if (resource.vertexBuffer != 0)
+    {
+        glDeleteBuffers(1, &resource.vertexBuffer);
+        resource.vertexBuffer = 0;
+    }
+
+    if (resource.vertexArray != 0)
+    {
+        glDeleteVertexArrays(1, &resource.vertexArray);
+        resource.vertexArray = 0;
     }
 }
 
-//Font Operations
-
-int Resource_manager::loadFont(const char* f_path, int font_size)
+bool Resource_manager::uploadMesh(
+    mesh_resource_info& mesh
+)
 {
-    if (!f_path)
+    if (
+        mesh.vertices.empty() ||
+        mesh.indices.empty()
+    )
     {
-        fprintf(stderr, "ERROR: Unable to load font from a null path.\n");
-        return -1;
+        return false;
     }
 
-    std::string file_path = f_path;
-    std::string font_key = makeFontKey(file_path, font_size);
+    glGenVertexArrays(1, &mesh.vertexArray);
+    glGenBuffers(1, &mesh.vertexBuffer);
+    glGenBuffers(1, &mesh.indexBuffer);
 
-    auto cached_font = font_ids_by_key.find(font_key);
-    if (cached_font != font_ids_by_key.end())
+    if (
+        mesh.vertexArray == 0 ||
+        mesh.vertexBuffer == 0 ||
+        mesh.indexBuffer == 0
+    )
     {
-        auto font_it = fonts.find(cached_font->second);
-        if (font_it != fonts.end() && font_it->second.font)
-        {
-            return static_cast<int>(cached_font->second);
-        }
-
-        TTF_Font* font = loadFontFromPath(file_path, font_size);
-        if (!font)
-        {
-            return -1;
-        }
-
-        font_it->second.font = font;
-        return static_cast<int>(cached_font->second);
+        return false;
     }
 
-    TTF_Font* font = loadFontFromPath(file_path, font_size);
-    if (!font)
-    {
-        return -1;
-    }
+    glBindVertexArray(mesh.vertexArray);
 
-    unsigned int font_id = nextFontId++;
-    fonts[font_id] = font_resource_info{file_path, font_size, font};
-    font_ids_by_key[font_key] = font_id;
-    return static_cast<int>(font_id);
+    glBindBuffer(
+        GL_ARRAY_BUFFER,
+        mesh.vertexBuffer
+    );
+
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        mesh.vertices.size() * sizeof(MeshVertex),
+        mesh.vertices.data(),
+        GL_STATIC_DRAW
+    );
+
+    glBindBuffer(
+        GL_ELEMENT_ARRAY_BUFFER,
+        mesh.indexBuffer
+    );
+
+    glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER,
+        mesh.indices.size() *
+            sizeof(std::uint32_t),
+        mesh.indices.data(),
+        GL_STATIC_DRAW
+    );
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(
+        0,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(MeshVertex),
+        reinterpret_cast<const void*>(
+            offsetof(MeshVertex, position)
+        )
+    );
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(
+        1,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(MeshVertex),
+        reinterpret_cast<const void*>(
+            offsetof(MeshVertex, normal)
+        )
+    );
+
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(
+        2,
+        2,
+        GL_FLOAT,
+        GL_FALSE,
+        sizeof(MeshVertex),
+        reinterpret_cast<const void*>(
+            offsetof(
+                MeshVertex,
+                textureCoordinate
+            )
+        )
+    );
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    return true;
 }
 
-void Resource_manager::loadFonts(const std::vector<font_info>& font_requests)
+int Resource_manager::loadFont(const char* filePathPointer, int fontSize)
 {
-    for (const auto& request : font_requests)
+    if (filePathPointer == nullptr)
+    {
+        return -1;
+    }
+
+    const std::string filePath = filePathPointer;
+    const std::string key = makeFontKey(filePath, fontSize);
+    const auto cached = fontIdsByKey.find(key);
+    if (cached != fontIdsByKey.end())
+    {
+        font_resource_info& info = fonts[cached->second];
+        if (info.font == nullptr)
+        {
+            info.font = loadFontFromPath(info.file_path, info.fontSize);
+        }
+        return info.font != nullptr ? static_cast<int>(cached->second) : -1;
+    }
+
+    TTF_Font* font = loadFontFromPath(filePath, fontSize);
+    if (font == nullptr)
+    {
+        return -1;
+    }
+
+    const unsigned int fontId = nextFontId++;
+    fonts[fontId] = {filePath, fontSize, font};
+    fontIdsByKey[key] = fontId;
+    return static_cast<int>(fontId);
+}
+
+void Resource_manager::loadFonts(const std::vector<font_info>& fontRequests)
+{
+    for (const font_info& request : fontRequests)
     {
         loadFont(request.file_path.c_str(), request.fontSize);
     }
 }
 
 void Resource_manager::loadLevelResources(
-    const std::vector<std::string>& texture_paths,
-    const std::vector<font_info>& font_requests)
+    const std::vector<std::string>& texturePaths,
+    const std::vector<font_info>& fontRequests)
 {
-    loadTextures(texture_paths);
-    loadFonts(font_requests);
+    loadTextures(texturePaths);
+    loadFonts(fontRequests);
 }
 
-TTF_Font* Resource_manager::getFont(unsigned int font_ID)
+TTF_Font* Resource_manager::getFont(unsigned int fontId)
 {
-    auto font_it = fonts.find(font_ID);
-    if (font_it == fonts.end())
-    {
-        fprintf(stderr, "ERROR: Invalid font handle: %u.\n", font_ID);
-        return nullptr;
-    }
-
-    if (font_it->second.font)
-    {
-        return font_it->second.font;
-    }
-
-    TTF_Font* font = loadFontFromPath(font_it->second.file_path, font_it->second.fontSize);
-    if (!font)
+    const auto found = fonts.find(fontId);
+    if (found == fonts.end())
     {
         return nullptr;
     }
 
-    font_it->second.font = font;
-    return font;
+    font_resource_info& info = found->second;
+    if (info.font == nullptr)
+    {
+        info.font = loadFontFromPath(info.file_path, info.fontSize);
+    }
+    return info.font;
 }
 
-void Resource_manager::deleteFont(unsigned int font_ID)
+void Resource_manager::deleteFont(unsigned int fontId)
 {
-    auto font_it = fonts.find(font_ID);
-    if (font_it == fonts.end())
+    const auto found = fonts.find(fontId);
+    if (found != fonts.end() && found->second.font != nullptr)
     {
-        return;
-    }
-
-    if (font_it->second.font)
-    {
-        TTF_CloseFont(font_it->second.font);
-        font_it->second.font = nullptr;
+        TTF_CloseFont(found->second.font);
+        found->second.font = nullptr;
     }
 }

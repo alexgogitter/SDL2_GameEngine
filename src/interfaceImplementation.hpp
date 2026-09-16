@@ -1,47 +1,55 @@
-#ifndef INTERFACEIMPLEMENTATION_HPP
-#define INTERFACEIMPLEMENTATION_HPP
-
+#pragma once
+#include "engineApi.hpp"
 #include <functional>
+#include <memory>
 #include <vector>
-#include "imgui.h"
-#include "backends/imgui_impl_sdl2.h"
-#include "backends/imgui_impl_sdlrenderer2.h"
-// forward declarations to avoid pulling SDL headers here
-struct SDL_Window;
-struct SDL_Renderer;
 
+#include <SDL.h>
+#include <imgui.h>
+#include <backends/imgui_impl_sdl2.h>
 
+class Shader;
 
-class Interface {
+/// Owns the Dear ImGui context, SDL event integration, and OpenGL UI resources.
+class Interface
+{
 public:
-    // create the singleton (only call once)
-    static Interface* create(SDL_Window* window, SDL_Renderer* renderer);
-    // get the existing singleton (returns nullptr if not created)
-    static Interface* get();
+    /// Creates the singleton interface on the supplied current OpenGL context.
+    /// @return Existing singleton when already created.
+    static ENGINE_API Interface* create(SDL_Window* window, SDL_GLContext glContext);
+    /// @return Current singleton, or nullptr before create().
+    static ENGINE_API Interface* get();
 
-    ~Interface();
-    void addDrawCallback(std::function<void()> callback) {
-        drawCallbacks.push_back(callback);
-    }
-    void draw(SDL_Renderer* renderer);
-    void update(SDL_Event& e) {
-        ImGui_ImplSDL2_ProcessEvent(&e);
-    };
-    // prevent copies/moves
+    /// Releases OpenGL UI resources and destroys the ImGui context.
+    ENGINE_API ~Interface();
+
+    /// Registers UI code invoked between ImGui::NewFrame() and ImGui::Render().
+    ENGINE_API void addDrawCallback(std::function<void()> callback);
+
+    /// Builds and renders the current ImGui frame. Call after Renderer::Render2D().
+    ENGINE_API void draw();
+
+    /// Forwards one SDL event to the ImGui SDL2 platform backend.
+    ENGINE_API void update(SDL_Event& event);
+
     Interface(const Interface&) = delete;
     Interface& operator=(const Interface&) = delete;
-    Interface(Interface&&) = delete;
-    Interface& operator=(Interface&&) = delete;
-    
+
 private:
-    // private constructor for singleton
-    Interface(SDL_Window* window, SDL_Renderer* renderer);
+    Interface(SDL_Window* window, SDL_GLContext glContext);
+
+    bool initialiseOpenGLRenderer();
+    void renderDrawData(ImDrawData* drawData);
+
     static Interface* instance;
 
-    SDL_Window* window;
-    SDL_Renderer* renderer;
+    SDL_Window* window = nullptr;
+    SDL_GLContext glContext = nullptr;
     std::vector<std::function<void()>> drawCallbacks;
 
+    std::unique_ptr<Shader> shader;
+    unsigned int fontTexture = 0;
+    unsigned int vertexArray = 0;
+    unsigned int vertexBuffer = 0;
+    unsigned int indexBuffer = 0;
 };
-
-#endif // INTERFACEIMPLEMENTATION_HPP

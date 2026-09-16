@@ -1,10 +1,10 @@
 #ifndef TIME_H
 #define TIME_H
-
+#include "engineApi.hpp"
 #include <cstdint>
 #include <SDL.h>
 
-class Time
+class ENGINE_API Time
 {
  private:
    std::uint64_t time_elapsed = 0;

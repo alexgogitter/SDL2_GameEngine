@@ -1,114 +1,165 @@
 # Resource Manager
 
-`Resource_manager` is the asset cache for the engine. It loads textures and fonts once, assigns integer handles, and keeps enough metadata to reload them later if the underlying SDL object has been deleted.
+`Resource_manager` caches OpenGL textures and SDL_ttf fonts behind stable integer
+handles. It is a runtime cache, not yet an asynchronous asset database or
+reference-counted content system.
 
-## Responsibilities
+## Lifetime Requirement
 
-- load textures from file paths
-- cache texture handles by path
-- load fonts by file path and size
-- cache font handles by path and size pair
-- preload textures and fonts for a level
-- return SDL pointers on demand for rendering code
-
-## Types
-
-### `font_info`
-
-A small request type used by `loadFonts()` and `loadLevelResources()`.
-
-- `file_path`: font asset path
-- `fontSize`: requested font size
-
-### `texture_info`
-
-Stores the source path and the current `SDL_Texture*`.
-
-### `font_resource_info`
-
-Stores the source path, font size, and the current `TTF_Font*`.
-
-## Class Overview
+Construct the manager only after a valid OpenGL context exists and destroy it
+before that context closes:
 
 ```cpp
-class Resource_manager
+Renderer renderer(...);
+renderer.Renderer_Init();
+
 {
-private:
-    SDL_Renderer* gRenderer;
+    Resource_manager resources;
+    // Load assets and run the scene.
+}
 
-    unsigned int nextTextureId;
-    unsigned int nextFontId;
-
-    std::map<unsigned int, texture_info> textures;
-    std::map<std::string, unsigned int> texture_ids_by_path;
-
-    std::map<unsigned int, font_resource_info> fonts;
-    std::map<std::string, unsigned int> font_ids_by_key;
-
-    static std::string makeFontKey(const std::string& file_path, int font_size);
-
-public:
-    Resource_manager();
-    Resource_manager(SDL_Renderer* gRenderer);
-
-    unsigned int loadTexture(const char* f_path);
-    void loadTextures(const std::vector<std::string>& f_paths);
-    SDL_Texture* getTexture(unsigned int texture_ID);
-    void deleteTexture(unsigned int texture_ID);
-
-    int loadFont(const char* f_path, int font_size);
-    void loadFonts(const std::vector<font_info>& font_requests);
-    void loadLevelResources(
-        const std::vector<std::string>& texture_paths,
-        const std::vector<font_info>& font_requests);
-    TTF_Font* getFont(unsigned int font_ID);
-    void deleteFont(unsigned int font_ID);
-};
+renderer.Renderer_Close();
 ```
 
-## Behavior
+Texture loading and deletion call OpenGL directly and therefore require the
+renderer's context to be current on the calling thread.
 
-### Texture Loading
+## Handles
 
-`loadTexture()` checks whether a path has already been cached. If the texture is already live, it returns the existing handle. If the texture was cached but later released, it reloads from the stored path.
-
-`getTexture()` follows the same cache-and-reload behavior when given a texture handle.
-
-`deleteTexture()` destroys the SDL texture but retains the cache entry, so the handle can still be reused.
-
-### Font Loading
-
-`loadFont()` caches fonts by a compound key of file path and size.
-
-`getFont()` returns the cached `TTF_Font*` or reloads it from the stored path and size if needed.
-
-`deleteFont()` closes the font while preserving the cache entry.
-
-### Preloading Helpers
-
-- `loadTextures()` loads a list of texture paths.
-- `loadFonts()` loads a list of font requests.
-- `loadLevelResources()` is a convenience wrapper for loading both resource sets together.
-
-## Usage Pattern
-
-Create the resource manager after SDL has a renderer:
+`TextureHandle` is currently an unsigned integer owned by the resource layer.
+It is not an OpenGL texture object.
 
 ```cpp
-Resource_manager manager(renderer);
-unsigned int textureId = manager.loadTexture("res/textures/example.png");
-SDL_Texture* texture = manager.getTexture(textureId);
+TextureHandle handle = resources.loadTexture("res/textures/crate.png");
+unsigned int gpuTexture = resources.getTexture(handle);
 ```
 
-For fonts:
+Gameplay and material code should retain `TextureHandle`. Only renderer-facing
+submission code should resolve it to `gpuTexture`.
+
+`InvalidTextureHandle` is the maximum representable handle value and indicates
+load failure or no assigned texture. OpenGL texture object zero indicates no
+resolved GPU texture.
+
+## Texture Loading
 
 ```cpp
-int fontId = manager.loadFont("res/fonts/comicz.ttf", 8);
-TTF_Font* font = manager.getFont(fontId);
+TextureHandle albedo = resources.loadTexture(
+    "res/textures/crate_albedo.png",
+    TextureColourSpace::SRGB
+);
+
+TextureHandle normal = resources.loadTexture(
+    "res/textures/crate_normal.png",
+    TextureColourSpace::Linear
+);
 ```
 
-## Notes
+The load process is:
 
-- The resource manager assumes the renderer is valid when it loads textures.
-- It currently stores raw SDL pointers and relies on explicit cleanup calls.
-- `loadTexture()` and `loadFont()` return `-1` on failure, even though the handles are unsigned or stored as `int` in different places. That works in practice, but a dedicated sentinel type would be clearer.
+1. build a cache key from path and colour space
+2. return the existing handle when already cached and resident
+3. decode new images with SDL_image
+4. convert decoded pixels to RGBA32
+5. upload an OpenGL 2D texture
+6. configure nearest filtering and clamp-to-edge wrapping
+7. store path, dimensions, colour space and GPU object
+8. return a stable engine handle
+
+Texture paths are relative to the process working directory.
+
+## Colour Space
+
+Use the right colour space for the meaning of the pixels:
+
+| Texture data | Colour space |
+|---|---|
+| albedo/base colour | sRGB |
+| coloured emission | sRGB |
+| alpha mask | linear |
+| normal | linear |
+| height | linear |
+| diffuse/roughness | linear |
+| specular/shiny | linear |
+| occlusion | linear |
+| masks/IDs | linear |
+
+sRGB textures use `GL_SRGB8_ALPHA8`. Sampling converts them into linear values
+before shader lighting. Linear textures use `GL_RGBA8` and retain numerical data
+without gamma conversion.
+
+The same path loaded once as sRGB and once as linear produces two cache entries.
+That is intentional because their GPU formats and sampling meaning differ.
+
+## Texture Metadata
+
+`getTextureInfo()` returns a manager-owned, read-only pointer containing:
+
+- original path
+- OpenGL texture object
+- width
+- height
+- colour space
+
+The pointer remains subject to the resource manager's lifetime and container
+mutations. Do not retain it as a long-lived asset reference.
+
+## Release and Reload
+
+`deleteTexture(handle)` deletes the OpenGL object but keeps cache metadata.
+Calling `getTexture(handle)` afterward reloads the image from its original path
+and stores a new OpenGL object behind the same engine handle.
+
+This is the basis for future resource eviction, but the current implementation
+does not automatically evict by memory pressure or usage.
+
+## Bulk Loading
+
+```cpp
+resources.loadTextures({
+    "res/textures/a.png",
+    "res/textures/b.png"
+});
+```
+
+`loadTextures()` assumes sRGB because it is intended as an albedo convenience.
+Load data maps individually with an explicit linear colour space.
+
+`loadLevelResources()` combines sRGB texture and font preloading.
+
+## Fonts
+
+Fonts are cached by path and point size:
+
+```cpp
+int fontHandle = resources.loadFont("res/fonts/comicz.ttf", 16);
+TTF_Font* font = resources.getFont(fontHandle);
+```
+
+The returned `TTF_Font*` remains owned by the manager. Do not close it directly.
+
+`deleteFont()` closes the font but preserves its path and size. A later
+`getFont()` reopens it using the same handle.
+
+## Destruction
+
+The destructor:
+
+- deletes every resident OpenGL texture
+- closes every resident SDL_ttf font
+
+It does not own or close the SDL/OpenGL subsystems themselves.
+
+## Current Limitations
+
+- synchronous loading on the calling thread
+- no texture reference counting
+- no automatic eviction budget
+- no file watching or hot reload
+- no texture arrays, cubemaps, compression, mipmaps or configurable samplers
+- no central material-manifest loader
+- no normalized/canonical path handling
+- handles are not serialized asset IDs
+
+Future resource work should preserve the distinction between stable engine
+handles and backend-specific GPU objects.

@@ -28,6 +28,9 @@ PACKAGE_ZIP   := $(DIST_DIR)/$(GAME_NAME)-windows-x64.zip
 SRC_DIR := src
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 
+GLAD_DIR := external/glad
+GLAD_SRC := $(GLAD_DIR)/src/glad.c
+
 # ------------------------------------------------------------
 # Dear ImGui
 # ------------------------------------------------------------
@@ -40,8 +43,7 @@ IMGUI_SRCS := \
 	$(IMGUI_DIR)/imgui_tables.cpp \
 	$(IMGUI_DIR)/imgui_widgets.cpp \
 	$(IMGUI_DIR)/imgui_demo.cpp \
-	$(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp \
-	$(IMGUI_DIR)/backends/imgui_impl_sdlrenderer2.cpp
+	$(IMGUI_DIR)/backends/imgui_impl_sdl2.cpp
 
 # ------------------------------------------------------------
 # GLM
@@ -69,6 +71,7 @@ COMMON_FLAGS := \
 	-I$(SRC_DIR) \
 	-I$(IMGUI_DIR) \
 	-I$(IMGUI_DIR)/backends \
+	-I$(GLAD_DIR)/include \
 	-I$(GLM_DIR) \
 	-I$(BOX2D_DIR)/include
 
@@ -94,6 +97,7 @@ LIBS := \
 	-lSDL2 \
 	-lSDL2_image \
 	-lSDL2_ttf \
+	-lopengl32 \
 	$(BOX2D_LIB) \
 	-lwinpthread
 
@@ -126,9 +130,9 @@ $(BOX2D_LIB): $(BOX2D_DIR)/CMakeLists.txt
 
 debug: $(DEBUG_EXE)
 
-$(DEBUG_EXE): $(SRCS) $(IMGUI_SRCS) $(BOX2D_LIB)
+$(DEBUG_EXE): $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) $(BOX2D_LIB)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(SRCS) $(IMGUI_SRCS) \
+	$(CXX) $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) \
 		$(COMMON_FLAGS) $(DEBUG_FLAGS) \
 		$(LDFLAGS) \
 		-o $(DEBUG_EXE) \
@@ -140,9 +144,9 @@ $(DEBUG_EXE): $(SRCS) $(IMGUI_SRCS) $(BOX2D_LIB)
 
 release: $(RELEASE_EXE)
 
-$(RELEASE_EXE): $(SRCS) $(IMGUI_SRCS) $(BOX2D_LIB)
+$(RELEASE_EXE): $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) $(BOX2D_LIB)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(SRCS) $(IMGUI_SRCS) \
+	$(CXX) $(SRCS) $(IMGUI_SRCS) $(GLAD_SRC) \
 		$(COMMON_FLAGS) $(RELEASE_FLAGS) \
 		$(LDFLAGS) \
 		-static-libgcc \

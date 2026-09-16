@@ -1,46 +1,94 @@
 # SDL2 Game Engine
 
-This project is a small SDL2-based game engine prototype with resource caching, an ImGui-backed debug UI, a renderer wrapper, and a lightweight object/component system.
+A small C++17 game-engine prototype using SDL2 as its platform layer, OpenGL 3.3
+for programmable rendering, Box2D for 2D physics, GLM for mathematics, and Dear
+ImGui for runtime tooling.
 
 Made by Matthew Bannister and Alex Riddell.
 
+## Current Capabilities
+
+- command-queued 2D rendering
+- orthographic 2D and perspective 3D camera classes
+- albedo, normal, height, emission, diffuse/roughness, and specular/shiny maps
+- TexturePacker XML sprite animation with event-driven transitions
+- forward-rendered 2D point lights
+- OpenGL texture caching with linear/sRGB handling
+- Box2D rigid bodies and box colliders
+- object/component composition
+- OpenGL-rendered ImGui interface
+
+Shadows and 3D mesh rendering are planned but not yet implemented. See the
+[current status](/Documentation/Current_Status.md) for precise feature boundaries.
+
+## Build
+
+The recommended Windows build uses Visual Studio 2022, CMake, and vcpkg. See
+[Getting Started](/Documentation/Getting_Started.md) for complete dependency
+installation steps.
+
+After installing vcpkg and setting `VCPKG_ROOT`, run from the repository root:
+
+```powershell
+git submodule update --init --recursive
+cmake --preset msvc-vs2022
+cmake --build --preset msvc-debug --target SDL2_GameEngine --parallel
+```
+
+Run the Debug build from the repository root:
+
+```powershell
+.\build\msvc-vs2022\Debug\SDL2_GameEngine.exe
+```
+
+The repository also contains a legacy Makefile workflow for the MSYS2 UCRT64
+MinGW toolchain:
+
+```bash
+make debug
+```
+
+Run:
+
+```powershell
+.\bin\SDL2_GameEngine_debug.exe
+```
+
+The current Makefile targets the MSYS2 UCRT64 MinGW toolchain on Windows.
+
 ## Documentation
 
-The generated documentation lives in [Documentation/Index.md](/Documentation/Index.md).
+Start with the [documentation index](/Documentation/Index.md).
 
-Start with [Documentation/Overview.md](/Documentation/Overview.md) for the architecture and [Documentation/Resource_Manager.md](/Documentation/Resource_Manager.md) for the asset cache.
+Recommended reading order:
 
-# Git etiquette
+1. [Getting Started](/Documentation/Getting_Started.md)
+2. [Engine Architecture](/Documentation/Overview.md)
+3. [OpenGL Renderer](/Documentation/OpenGL_Renderer.md)
+4. [Objects and Components](/Documentation/Components.md)
+5. [Blender Asset Workflow](/Documentation/Blender_Asset_Workflow.md)
 
-We will be using feature branches to implement main features from the trello page.
-Smaller issues can be used and referenced via the issue tracker, for every commit reference either issue tracker or trello.
+Public engine headers use Doxygen-style comments so IntelliSense shows parameter,
+return, ownership, unit, and lifecycle documentation while editing C++.
 
-Once a feature has been done on the branch it is then ready to merge and you will make a pull request to merge to main.
+## Repository Layout
 
-Milestone is an option we may decide at a later data
+```text
+src/             engine and demo C++ source
+res/             runtime textures, fonts, maps, and GLSL shaders
+external/        GLAD, GLM, ImGui, and Box2D dependencies
+Documentation/   maintained engine manual
+bin/             local build output
+dist/            packaged release output
+```
 
-# Code conventions
+## Contribution Expectations
 
-Comment methods, return, args, brief description
-Code indentation is tabs set to space 4.
-Method scopes should be done on a new line.
-Put spaces between oporators e.g. char var='c'; ==> char var = 'c';
-
-pdata for a pointer to data
-
-## Methods
-Capitals
-Camel case
-
-## Variables
-Private scope - start with underscore lowercase
-Public - start with capital
-Camel case
-
-RAII usage for heap objects (make_unique, smart ptrs)
-
-# Debugging
-usage of #ifdef and assert statments when possible
-unit tests - https://github.com/catchorg/Catch2
-
-# [Documentation](/Documentation/Index.md)
+- Use feature branches for major work.
+- Reference the relevant issue or project item in commits.
+- Prefer RAII and explicit ownership.
+- Use four-space indentation.
+- Put function opening braces on a new line.
+- Build with warnings enabled before review.
+- Update both Markdown documentation and public Doxygen comments when behavior or
+  APIs change. See [Documentation Maintenance](/Documentation/Documentation_Maintenance.md).

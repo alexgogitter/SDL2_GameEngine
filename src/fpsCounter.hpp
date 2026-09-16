@@ -3,8 +3,7 @@
 
 #include <cstdint>
 // To access the renderer
-#include "render.hpp"
-
+#include "render2D.hpp"
 
 
 class fpsCounter {
@@ -41,7 +40,7 @@ public:
     // Default destructor
     ~fpsCounter();
 
-    void update(Renderer* r, std::string text);
+    void update(Renderer2D* r, std::string text);
 
     static void setDeltaTime(std::uint64_t _deltaTime);
 

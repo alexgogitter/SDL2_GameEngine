@@ -1,12 +1,12 @@
 #pragma once
-
+#include "engineApi.hpp"
 #include <SDL.h>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 
-class EventListener
+class ENGINE_API EventListener
 {
 public:
     struct ButtonState

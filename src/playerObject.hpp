@@ -8,7 +8,7 @@ class PlayerObject final : public PhysicsBoxObject
 public:
     PlayerObject(
         Resource_manager& resources,
-        Renderer* renderer,
+        Renderer2D* renderer,
         PhysicsWorld2D& physicsWorld,
         const glm::vec2& pixelPosition)
         : PhysicsBoxObject(
