@@ -74,91 +74,74 @@ add_subdirectory(external/box2d)
 
 # Core engine runtime sources
 set(ENGINE_RUNTIME_SOURCES
-    src/animationControllerComponent.cpp
-    src/camera2D.cpp
-    src/camera3D.cpp
-    src/colliderComponent.cpp
-    src/component.cpp
-    src/eventListener.cpp
-    src/fpsCounter.cpp
-    src/interfaceImplementation.cpp
-    src/light2DComponent.cpp
-    src/object.cpp
-    src/physicsWorld2D.cpp
-    src/render2D.cpp
-    src/render3D.cpp
-    src/window.cpp
-    src/resource_manager.cpp
-    src/rigidbodyComponent.cpp
-    src/shader.cpp
-    src/spriteRendererComponent.cpp
-    src/stb_image.cpp
-    src/textureComponent.cpp
-    src/time.cpp
-    src/objectId.hpp
-    src/objectId.cpp
+    src/EngineCore/animationControllerComponent.cpp
+    src/EngineCore/boxCollider3DComponent.cpp
+    src/EngineCore/builtinComponents.cpp
+    src/EngineCore/camera2D.cpp
+    src/EngineCore/camera3D.cpp
+    src/EngineCore/cameraComponent.cpp
+    src/EngineCore/cameraSystem.cpp
+    src/EngineCore/colliderComponent.cpp
+    src/EngineCore/component.cpp
+    src/EngineCore/componentRegistry.cpp
+    src/EngineCore/eventListener.cpp
+    src/EngineCore/fpsCounter.cpp
+    src/EngineCore/light2DComponent.cpp
+    src/EngineCore/lighting3D.cpp
+    src/EngineCore/layerRegistry.cpp
+    src/EngineCore/meshFilter.cpp
+    src/EngineCore/meshRendererComponent.cpp
+    src/EngineCore/object.cpp
+    src/EngineCore/objectId.cpp
+    src/EngineCore/physicsWorld2D.cpp
+    src/EngineCore/physicsWorld3D.cpp
+    src/EngineCore/physxContext.cpp
+    src/EngineCore/render2D.cpp
+    src/EngineCore/render3D.cpp
+    src/EngineCore/renderTarget.cpp
+    src/EngineCore/resource_manager.cpp
+    src/EngineCore/rigidbody3DComponent.cpp
+    src/EngineCore/rigidbodyComponent.cpp
+    src/EngineCore/scene.cpp
+    src/EngineCore/shader.cpp
+    src/EngineCore/spriteRendererComponent.cpp
+    src/EngineCore/stb_image.cpp
+    src/EngineCore/textureComponent.cpp
+    src/EngineCore/time.cpp
+    src/EngineCore/window.cpp
+)
+
+set(ENGINE_EDITOR_SOURCES
+    src/Editor/cameraOutputPanel.cpp
+    src/Editor/componentInspector.cpp
+    src/Editor/editorCamera.cpp
+    src/Editor/editorDockspace.cpp
+    src/Editor/editorGizmoOverlay.cpp
+    src/Editor/editorPlaySnapshot.cpp
+    src/Editor/editorPlayToolbar.cpp
+    src/Editor/editorSelection.cpp
+    src/Editor/gameViewPanel.cpp
+    src/Editor/interfaceImplementation.cpp
+    src/Editor/objectInspector.cpp
+    src/Editor/sceneHierarchy.cpp
+    src/Editor/sceneViewPanel.cpp
+)
+
+file(GLOB ENGINE_RUNTIME_HEADERS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/EngineCore/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/EngineCore/*.hpp"
+)
+
+file(GLOB ENGINE_EDITOR_HEADERS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Editor/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Editor/*.hpp"
 )
 
 add_library(EngineRuntime SHARED
     ${ENGINE_RUNTIME_SOURCES}
-    src/layer.hpp
-    src/layerRegistry.hpp
-    src/layerRegistry.cpp
-    src/scene.cpp
-    src/componentRegistry.cpp
-    src/builtInComponents.hpp
-    src/builtinComponents.cpp
-    src/componentProperty.hpp
-    src/componentInspector.hpp
-    src/componentInspector.cpp
-    src/editorSelection.hpp
-    src/editorSelection.cpp
-    src/objectInspector.hpp
-    src/objectInspector.cpp
-    src/sceneHierarchy.hpp
-    src/sceneHierarchy.cpp
-    src/physxContext.hpp
-    src/physxContext.cpp
-    src/transform3D.hpp
-    src/mesh3D.hpp
-    src/meshFilterComponent.hpp
-    src/meshFilter.cpp
-    src/cameraComponent.hpp
-    src/cameraComponent.cpp
-    src/cameraSystem.hpp
-    src/cameraSystem.cpp
-    src/cameraOutputPanel.hpp
-    src/cameraOutputPanel.cpp
-    src/renderTarget.hpp
-    src/renderTarget.cpp
-    src/gameViewPanel.hpp
-    src/gameViewPanel.cpp
-    src/editorCamera.hpp
-    src/editorCamera.cpp
-    src/sceneViewPanel.hpp
-    src/sceneViewPanel.cpp
-    src/editorDockspace.hpp
-    src/editorDockspace.cpp
-    src/gameViewportInput.hpp
-    src/gameViewInput.hpp
-    src/meshRendererComponent.hpp
-    src/meshRendererComponent.cpp
-    src/physicsWorld3D.hpp
-    src/physicsWorld3D.cpp
-    src/rigidbody3DComponent.hpp
-    src/rigidbody3DComponent.cpp
-    src/editorPlayState.hpp
-    src/editorPlayToolbar.hpp
-    src/editorPlayToolbar.cpp
-    src/editorPlaySnapshot.hpp
-    src/editorPlaySnapshot.cpp
-    src/boxCollider3DComponent.hpp
-    src/boxCollider3DComponent.cpp
-    src/editorGizmoOverlay.hpp
-    src/editorGizmoOverlay.cpp
-    src/lighting3D.hpp
-    src/lighting3D.cpp
-    src/window.hpp
+    ${ENGINE_EDITOR_SOURCES}
+    ${ENGINE_RUNTIME_HEADERS}
+    ${ENGINE_EDITOR_HEADERS}
 )
 
 add_library(Engine::Runtime ALIAS EngineRuntime)
@@ -166,7 +149,10 @@ add_library(Engine::Runtime ALIAS EngineRuntime)
 target_include_directories(EngineRuntime
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Editor"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/EngineCore"
         "${CMAKE_CURRENT_SOURCE_DIR}/external"
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/glm"
 )
 
 target_compile_definitions(EngineRuntime
@@ -189,7 +175,7 @@ target_link_libraries(EngineRuntime
 
 # Generic engine editor
 add_executable(SDL2_GameEngine
-    src/main.cpp
+    src/Editor/editorEntryPoint.cpp
 )
 
 target_link_libraries(SDL2_GameEngine

@@ -29,11 +29,13 @@ MSVC_BUILD := .\\tools\\build_msvc.bat
 
 # ------------------------------------------------------------
 # Source files
-# Uses find so future folders such as src/physics/ also compile.
+# Keep the runtime and editor source directories explicit for the legacy build.
 # ------------------------------------------------------------
 
 SRC_DIR := src
-SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+SRCS := \
+	$(wildcard $(SRC_DIR)/EngineCore/*.cpp) \
+	$(wildcard $(SRC_DIR)/Editor/*.cpp)
 
 GLAD_DIR := external/glad
 GLAD_SRC := $(GLAD_DIR)/src/glad.c
@@ -75,7 +77,8 @@ COMMON_FLAGS := \
 	-Wextra \
 	-std=c++17 \
 	-IC:/msys64/ucrt64/include/SDL2 \
-	-I$(SRC_DIR) \
+	-I$(SRC_DIR)/EngineCore \
+	-I$(SRC_DIR)/Editor \
 	-I$(IMGUI_DIR) \
 	-I$(IMGUI_DIR)/backends \
 	-I$(GLAD_DIR)/include \

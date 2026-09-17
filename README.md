@@ -74,7 +74,8 @@ return, ownership, unit, and lifecycle documentation while editing C++.
 ## Repository Layout
 
 ```text
-src/             engine and demo C++ source
+src/EngineCore/  runtime engine C++ source and public headers
+src/Editor/      editor UI, tools, and editor entry point
 res/             runtime textures, fonts, maps, and GLSL shaders
 external/        GLAD, GLM, ImGui, and Box2D dependencies
 Documentation/   maintained engine manual
