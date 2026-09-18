@@ -1,3 +1,4 @@
+#include <SDL.h>
 #include "componentRegistry.hpp"
 
 #include "component.hpp"
@@ -59,6 +60,7 @@ struct ComponentRegistry::Impl
 ComponentRegistry::ComponentRegistry() : impl(std::make_unique<Impl>()) {}
 
 ComponentRegistry::~ComponentRegistry() = default;
+void ComponentRegistry::swap(ComponentRegistry &other) { impl.swap(other.impl); }
 
 bool ComponentRegistry::registerType(const char *typeName, const char *displayName, const char *category, ComponentFactory factory, const char *const *requiredTypeNames, std::size_t requiredTypeCount)
 {
@@ -195,7 +197,6 @@ Component *ComponentRegistry::createAndAttach(const char *typeName, Object &pare
 {
     const RegistryEntry *rootEntry = impl->find(typeName);
 
-    printf("Root Entry: %s\n", std::string(rootEntry != nullptr ? rootEntry->typeName : "null").c_str());
 
     if (rootEntry == nullptr || parent.getComponentByTypeName(rootEntry->typeName) != nullptr) {
         return nullptr;
@@ -230,7 +231,8 @@ Component *ComponentRegistry::createAndAttach(const char *typeName, Object &pare
             }
         }
 
-        Component *component = entry->factory(&parent, context);
+        std::unique_ptr<Component> pending(entry->factory(&parent, context));
+        Component *component = pending.get();
 
         if (component == nullptr) {
             creationStack.pop_back();
@@ -238,15 +240,13 @@ Component *ComponentRegistry::createAndAttach(const char *typeName, Object &pare
         }
 
         if (component->getParent() != &parent || component->getTypeName() != entry->typeName) {
-            delete component;
             creationStack.pop_back();
             return nullptr;
         }
 
-        Component *attached = parent.add_Component(component);
+        Component *attached = parent.add_Component(pending.release());
 
         if (attached == nullptr) {
-            delete component;
             creationStack.pop_back();
             return nullptr;
         }

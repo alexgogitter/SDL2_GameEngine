@@ -1,3 +1,6 @@
+#include <SDL.h>
+#include "logger.hpp"
+#include <sstream>
 #include "window.hpp"
 
 #include <algorithm>
@@ -21,12 +24,12 @@ bool Window::Initialize()
     }
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::fprintf(stderr, "Unable to initialise SDL: %s\n", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialise SDL: %s\n", SDL_GetError());
         return false;
     }
 
     if ((IMG_Init(imageFlags) & imageFlags) != imageFlags) {
-        std::fprintf(stderr, "Unable to initialise SDL_image: %s\n", IMG_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to initialise SDL_image: %s\n", IMG_GetError());
         Shutdown();
         return false;
     }
@@ -52,24 +55,24 @@ bool Window::initializeOpenGLContext()
 
     window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == nullptr) {
-        std::fprintf(stderr, "Unable to create SDL OpenGL window: %s\n", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to create SDL OpenGL window: %s\n", SDL_GetError());
         return false;
     }
 
     glContext = SDL_GL_CreateContext(window);
     if (glContext == nullptr) {
-        std::fprintf(stderr, "Unable to create OpenGL context: %s\n", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to create OpenGL context: %s\n", SDL_GetError());
         return false;
     }
 
     SDL_GL_MakeCurrent(window, glContext);
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
-        std::fprintf(stderr, "Unable to load OpenGL functions through GLAD.\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to load OpenGL functions through GLAD.\n");
         return false;
     }
 
     SDL_GL_SetSwapInterval(1);
-    std::cout << "OpenGL renderer: " << glGetString(GL_RENDERER) << '\n' << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
+    { std::ostringstream message; message << "OpenGL renderer: " << glGetString(GL_RENDERER) << '\n' << "OpenGL version: " << glGetString(GL_VERSION) << '\n'; Logger::write(LogLevel::Info, "Engine", message.str()); }
     return true;
 }
 

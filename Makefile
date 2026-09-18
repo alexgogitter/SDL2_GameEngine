@@ -20,8 +20,8 @@ RELEASE_BIN_DIR := $(CMAKE_BUILD_DIR)/Release
 DEBUG_EXE     := $(DEBUG_BIN_DIR)/$(GAME_NAME).exe
 RELEASE_EXE   := $(RELEASE_BIN_DIR)/$(GAME_NAME).exe
 
-PACKAGE_DIR   := $(DIST_DIR)/$(GAME_NAME)-windows-x64
-PACKAGE_ZIP   := $(DIST_DIR)/$(GAME_NAME)-windows-x64.zip
+PACKAGE_DIR   := $(DIST_DIR)/Game/Release
+PACKAGE_ZIP   := $(DIST_DIR)/Game-windows-x64.zip
 
 # The current engine uses NVIDIA PhysX through vcpkg, so the supported build
 # path is MSVC/CMake. The helper script discovers Visual Studio and vcpkg.
@@ -152,43 +152,14 @@ release:
 # Portable Windows package for friends
 # ------------------------------------------------------------
 
-package: release
-	@echo Creating portable Windows package...
-	rm -rf $(PACKAGE_DIR)
-	rm -f $(PACKAGE_ZIP)
+package:
+	powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/package_game.ps1
 
-	mkdir -p $(PACKAGE_DIR)
-	mkdir -p $(PACKAGE_DIR)/licenses
+scripts:
+	cmd.exe //d //c $(MSVC_BUILD) Debug UserScripts
 
-	cp $(RELEASE_EXE) $(PACKAGE_DIR)/$(GAME_NAME).exe
-	cp $(RELEASE_BIN_DIR)/*.dll $(PACKAGE_DIR)/
-
-	cp -r res $(PACKAGE_DIR)/res
-	cp README.md $(PACKAGE_DIR)/README.md
-
-	@if [ -f "$(BOX2D_DIR)/LICENSE" ]; then \
-		cp "$(BOX2D_DIR)/LICENSE" "$(PACKAGE_DIR)/licenses/Box2D-LICENSE.txt"; \
-	fi
-
-	@if [ -f "$(IMGUI_DIR)/LICENSE.txt" ]; then \
-		cp "$(IMGUI_DIR)/LICENSE.txt" "$(PACKAGE_DIR)/licenses/ImGui-LICENSE.txt"; \
-	fi
-
-	@if [ -f "$(GLM_DIR)/copying.txt" ]; then \
-		cp "$(GLM_DIR)/copying.txt" "$(PACKAGE_DIR)/licenses/GLM-LICENSE.txt"; \
-	fi
-
-	@for dll in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do \
-		if [ -f "/ucrt64/bin/$$dll" ]; then \
-			cp "/ucrt64/bin/$$dll" "$(PACKAGE_DIR)/"; \
-		fi; \
-	done
-
-	powershell.exe -NoProfile -Command "Compress-Archive -Path '$(PACKAGE_DIR)' -DestinationPath '$(PACKAGE_ZIP)' -Force"
-
-	@echo
-	@echo Package created:
-	@echo $(PACKAGE_ZIP)
+player:
+	cmd.exe //d //c $(MSVC_BUILD) Release StageGame
 
 # ------------------------------------------------------------
 # Clean output only
@@ -198,6 +169,9 @@ clean:
 	rm -f $(DEBUG_EXE)
 	rm -f $(RELEASE_EXE)
 
+clean-build:
+	rm -rf build/*
+
 clean-package:
 	rm -rf $(PACKAGE_DIR)
 	rm -f $(PACKAGE_ZIP)
@@ -205,4 +179,4 @@ clean-package:
 clean-box2d:
 	rm -rf $(BOX2D_BUILD)
 
-.PHONY: all box2d debug release package clean clean-package clean-box2d
+.PHONY: all box2d debug release package scripts player clean clean-build clean-package clean-box2d

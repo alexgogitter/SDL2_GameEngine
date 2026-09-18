@@ -1,3 +1,6 @@
+#include <SDL.h>
+#include "logger.hpp"
+#include <sstream>
 #include "renderTarget.hpp"
 
 #include <algorithm>
@@ -67,7 +70,7 @@ bool RenderTarget::resize(int newWidth, int newHeight)
     glBindFramebuffer(GL_FRAMEBUFFER, static_cast<unsigned int>(previousFramebuffer));
 
     if (!complete) {
-        std::cerr << "Failed to create render target " << width << "x" << height << ".\n";
+        { std::ostringstream message; message << "Failed to create render target " << width << "x" << height << ".\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
     }
 
     return complete;

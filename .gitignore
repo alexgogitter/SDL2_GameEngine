@@ -6,3 +6,5 @@ vcpkg*
 ./external
 build/
 dist/
+
+logs/

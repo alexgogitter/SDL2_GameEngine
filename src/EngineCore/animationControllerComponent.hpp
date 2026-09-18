@@ -89,6 +89,10 @@ class AnimationControllerComponent final : public Component
         bool loop = true;
     };
 
+    std::string CaptureState() const override;
+    void RestoreState(const std::string &state) override;
+    struct AtlasSource { std::string path, prefix; float fps; bool loop; };
+    std::vector<AtlasSource> atlasSources;
     void Update(std::uint64_t deltaTime) override;
 
     void processQueuedEvents();

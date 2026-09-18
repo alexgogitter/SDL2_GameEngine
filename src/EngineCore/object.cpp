@@ -1,3 +1,4 @@
+#include <SDL.h>
 #include "object.hpp"
 
 #include <algorithm>
@@ -84,7 +85,7 @@ void Object::draw2D(Renderer2D *r)
     }
 
     if (r == nullptr) {
-        std::fprintf(stderr, "ERROR: Renderer is null in Object::draw().\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: Renderer is null in Object::draw().\n");
         return;
     }
 
@@ -179,8 +180,8 @@ Component *Object::getComponentAt(std::size_t index) const
 Component *Object::getComponentByTypeName(const std::string &typeName) const
 {
     const auto found = components.find(typeName);
-    printf("Searching for component type: %s\n", typeName.c_str());
-    printf("Found component type: %s\n", found != components.end() ? found->second->getTypeName().c_str() : "null");
+
+
     return found != components.end() ? found->second : nullptr;
 }
 

@@ -147,3 +147,49 @@ void SpriteRendererComponent::fitDrawRectToTexture(TextureHandle textureHandle)
     drawRectPixels = {static_cast<float>(info->width) * -0.5f, static_cast<float>(info->height) * -0.5f, static_cast<float>(info->width), static_cast<float>(info->height)};
     drawRectConfigured = true;
 }
+
+namespace
+{
+const char *TextureKeys[] = {"albedoPath", "alphaMaskPath", "diffusePath", "normalPath", "heightPath", "emissionPath", "specularPath"};
+const char *TextureLabels[] = {"Albedo", "Alpha mask", "Diffuse", "Normal", "Height", "Emission", "Specular"};
+}
+std::size_t SpriteRendererComponent::GetPropertyCount() const { return 24; }
+bool SpriteRendererComponent::GetProperty(std::size_t index, ComponentProperty &property)
+{
+    TextureHandle handles[] = {material.albedo, material.alphaMask, material.diffuse, material.normal, material.height, material.emission, material.specular};
+    if (index < 7) {
+        if (observedHandles[index] != handles[index]) {
+            const auto *info = resources->getTextureInfo(handles[index]);
+            texturePaths[index] = info ? info->file_path : "";
+            observedHandles[index] = handles[index];
+        }
+        property = {TextureKeys[index], TextureLabels[index], ComponentPropertyType::String, &texturePaths[index]};
+        return true;
+    }
+    glm::vec4 *uvs[] = {&material.albedoUvRect, &material.alphaMaskUvRect, &material.diffuseUvRect, &material.normalUvRect, &material.heightUvRect, &material.emissionUvRect, &material.specularUvRect};
+    static const char *UvKeys[] = {"albedoUv", "alphaMaskUv", "diffuseUv", "normalUv", "heightUv", "emissionUv", "specularUv"};
+    if (index < 14) { property = {UvKeys[index-7], UvKeys[index-7], ComponentPropertyType::Vector4, uvs[index-7]}; return true; }
+    switch (index) {
+    case 14: property = {"tint", "Tint", ComponentPropertyType::Colour4, &material.tint}; return true;
+    case 15: property = {"normalStrength", "Normal strength", ComponentPropertyType::Float, &material.normalStrength}; return true;
+    case 16: property = {"heightScale", "Height scale", ComponentPropertyType::Float, &material.heightScale}; return true;
+    case 17: property = {"specularStrength", "Specular strength", ComponentPropertyType::Float, &material.specularStrength}; return true;
+    case 18: property = {"shininess", "Shininess", ComponentPropertyType::Float, &material.shininess}; return true;
+    case 19: property = {"lit", "Lit", ComponentPropertyType::Boolean, &material.lit}; return true;
+    case 20: property = {"renderLayer", "Render layer", ComponentPropertyType::Integer, &material.renderLayer}; return true;
+    case 21: property = {"drawRect", "Draw rectangle", ComponentPropertyType::Vector4, &drawRectPixels}; return true;
+    case 22: property = {"drawRectConfigured", "Use draw rectangle", ComponentPropertyType::Boolean, &drawRectConfigured}; return true;
+    case 23: property = {"drawRectExplicit", "Explicit draw rectangle", ComponentPropertyType::Boolean, &drawRectExplicit}; return true;
+    default: return false;
+    }
+}
+void SpriteRendererComponent::OnPropertyChanged(const char *key)
+{
+    TextureHandle *handles[] = {&material.albedo, &material.alphaMask, &material.diffuse, &material.normal, &material.height, &material.emission, &material.specular};
+    for (std::size_t i = 0; i < 7; ++i) {
+        if (std::string(key) != TextureKeys[i]) continue;
+        *handles[i] = texturePaths[i].empty() ? InvalidTextureHandle : resources->loadTexture(texturePaths[i].c_str(), i == 0 || i == 5 ? TextureColourSpace::SRGB : TextureColourSpace::Linear);
+        observedHandles[i] = *handles[i];
+        if (i == 0 && !drawRectConfigured && *handles[i] != InvalidTextureHandle) fitDrawRectToTexture(*handles[i]);
+    }
+}

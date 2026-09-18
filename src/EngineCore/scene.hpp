@@ -20,6 +20,10 @@ class Scene
     ENGINE_API Scene(Resource_manager &resources, Renderer2D &renderer, Renderer3D &renderer3D);
 
     ENGINE_API ~Scene();
+    /// Deletes all objects, or exchanges ownership with a scene using the same services.
+    ENGINE_API void clear();
+    ENGINE_API void swapContents(Scene &other);
+    ENGINE_API void appendContents(Scene &other);
 
     Scene(const Scene &) = delete;
     Scene &operator=(const Scene &) = delete;

@@ -31,8 +31,12 @@
 
 #include "cameraOutputPanel.hpp"
 #include "editorCamera.hpp"
-#include "editorPlaySnapshot.hpp"
+#include "editorProject.hpp"
+#include "scriptModule.hpp"
+#include "logger.hpp"
+#include <filesystem>
 #include "editorPlayState.hpp"
+#include "editorMenuToolbar.hpp"
 #include "editorPlayToolbar.hpp"
 #include "gameViewPanel.hpp"
 #include "meshFilterComponent.hpp"
@@ -67,10 +71,15 @@ void SubmitSelectedObjectOutline(Renderer3D &renderer, Resource_manager &resourc
 }
 } // namespace
 
-int main(int, char **)
+int main(int argc, char **argv)
 {
 
-    Window window(1600, 900, 60, IMG_INIT_PNG, "Game Engine");
+    const bool buildTest = argc > 1 && std::strcmp(argv[1], "--build-scripts-test") == 0;
+    const bool smokeTest = argc > 1 && std::strcmp(argv[1], "--smoke-test") == 0;
+    std::filesystem::current_path(ENGINE_PROJECT_DIRECTORY);
+    Logger::initialize("logs/editor.log");
+    Logger::write(LogLevel::Info, "Engine", "Starting Ricochet editor");
+    Window window(1600, 900, 60, IMG_INIT_PNG, "Ricochet Engine");
     if (!window.Initialize()) {
         return 1;
     }
@@ -116,7 +125,9 @@ int main(int, char **)
         return 6;
     }
     else {
+        if (smokeTest || buildTest) ImGui::GetIO().IniFilename = nullptr;
         Resource_manager resources;
+        ScriptModule scriptModule; // Must outlive the registry and scene.
         ComponentRegistry componentRegistry;
 
         const bool componentsRegistered = RegisterBuiltInComponents(componentRegistry);
@@ -135,27 +146,7 @@ int main(int, char **)
 
         EditorCamera editorCamera(960.0f, 540.0f);
         EditorPlayState editorPlayState;
-        EditorPlaySnapshot editorPlaySnapshot;
-
-        //// ================================== BEGIN SCENE POPULATION SETUP ==========================
-
-        // Object* inspectorLightObject = editorScene.createObject("Inspector Light");
-
-        // Component* inspectorLightComponent = nullptr;
-
-        // if (componentsRegistered && inspectorLightObject != nullptr)
-        // {
-        //     // Prevent the light object itself from drawing a fallback quad.
-        //     inspectorLightObject->draw_colour.a = 0.0f;
-
-        //     ComponentCreateContext context;
-        //     context.physicsWorld3D = &physicsWorld;
-        //     context.resources = &resources;
-        //     context.renderer = &renderer;
-
-        //     inspectorLightComponent = componentRegistry.createAndAttach("PointLight2D", *inspectorLightObject, context);
-
-        // }
+        std::string playSnapshot;
 
         Object *physicsFloorObject = editorScene.createObject("Physics Floor");
 
@@ -163,7 +154,8 @@ int main(int, char **)
 
         Object *mainCameraObject = editorScene.createObject("Main Camera");
 
-        if (componentsRegistered && mainCameraObject != nullptr) {
+        if (componentsRegistered && mainCameraObject != nullptr) 
+        {
             mainCameraObject->draw_colour.a = 0.0f;
 
             mainCameraObject->transform.setPosition(glm::vec3(0.0f, 4.0f, 10.0f));
@@ -181,7 +173,8 @@ int main(int, char **)
             editorSelection.selectObject(mainCameraObject);
         }
 
-        if (mainCameraObject != nullptr) {
+        if (mainCameraObject != nullptr) 
+        {
             cameraSystem.setPrimaryCamera(editorScene, CameraOutputTarget::GameView, mainCameraObject->getId());
         }
 
@@ -237,14 +230,22 @@ int main(int, char **)
         editorComponentContext.renderer = &renderer;
         editorComponentContext.renderer3D = &renderer3D;
 
+        scriptModule.reload(ENGINE_SCRIPT_PATH, editorScene, componentRegistry, editorComponentContext, true);
+        EditorProject project(editorScene, componentRegistry, editorComponentContext, editorSelection, editorPlayState, editorLayers, cameraSystem, scriptModule);
+
+        if (buildTest) project.buildScripts();
+
         Time frameTimer;
         std::uint64_t frameDeltaMs = 16;
 
-        interface->addDrawCallback([&editorScene, &editorSelection, &editorLayers, &cameraSystem, &gameViewTarget, &gameViewPanelState, &sceneViewTarget, &sceneViewPanelState, &editorCamera, &editorPlayState, &componentRegistry, &editorComponentContext]() {
+        interface->addDrawCallback([&editorScene, &editorSelection, &editorLayers, &cameraSystem, &gameViewTarget, &gameViewPanelState, &sceneViewTarget, &sceneViewPanelState, &editorCamera, &editorPlayState, &componentRegistry, &editorComponentContext, &project]() {
             if (gameViewPanelState.fullscreen) {
                 DrawGameViewPanel(gameViewTarget, gameViewPanelState);
                 return;
             }
+            
+            DrawMenuToolbar(project);
+            project.drawPanels();
 
             DrawEditorPlayToolbar(editorPlayState);
 
@@ -259,7 +260,16 @@ int main(int, char **)
             Object *selected = editorSelection.getSelectedObject(editorScene);
 
             if (selected != nullptr) {
-                DrawObjectInspector(*selected, editorLayers, componentRegistry, editorComponentContext, editorPlayState.isEditing());
+                ScriptComponentActions scriptActions;
+                scriptActions.createScript = [&project](const std::string &name, std::string &error) {
+                    return project.createScriptComponent(name, error);
+                };
+                scriptActions.editScript = [&project](const std::string &typeName, std::string &error) {
+                    return project.editScriptComponent(typeName, error);
+                };
+
+                DrawObjectInspector(*selected, editorLayers, componentRegistry, editorComponentContext,
+                                    editorPlayState.isEditing(), &scriptActions);
             }
             else {
                 ImGui::TextDisabled("No object selected");
@@ -273,16 +283,22 @@ int main(int, char **)
         });
 
         bool quit = false;
+        int smokeFrames = 0;
         SDL_Event event;
         EventListener &input = EventListener::Get();
 
         while (!quit) {
+            project.tick();
             frameTimer.tick();
             input.BeginFrame();
 
             while (SDL_PollEvent(&event) != 0) {
                 input.ProcessEvent(event);
                 interface->update(event);
+
+                if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+                    project.notifyWindowFocusGained();
+                }
 
                 if (event.type == SDL_QUIT) {
                     quit = true;
@@ -329,6 +345,7 @@ int main(int, char **)
                 const float simulationDelta = advanceSingleFrame ? PhysicsWorld3D::FixedTimeStep : deltaSeconds;
 
                 physicsWorld.Step(simulationDelta);
+                physicsWorld2D.Step(simulationDelta);
 
                 const std::uint64_t simulationDeltaMs = advanceSingleFrame ? static_cast<std::uint64_t>(PhysicsWorld3D::FixedTimeStep * 1000.0f) : frameDeltaMs;
 
@@ -392,13 +409,16 @@ int main(int, char **)
             const EditorPlayMode modeAfterEditorDraw = editorPlayState.getMode();
 
             if (modeBeforeEditorDraw == EditorPlayMode::Edit && modeAfterEditorDraw == EditorPlayMode::Playing) {
-                editorPlaySnapshot.capture(editorScene);
+                playSnapshot = project.capture();
             }
             else if (modeBeforeEditorDraw != EditorPlayMode::Edit && modeAfterEditorDraw == EditorPlayMode::Edit) {
-                editorPlaySnapshot.restore(editorScene);
+                project.restore(playSnapshot);
+                playSnapshot.clear();
             }
 
             window.Present();
+            if (smokeTest && ++smokeFrames >= 5) quit = true;
+            if (buildTest && !project.isBuilding()) quit = true;
 
             frameDeltaMs = frameTimer.tock();
         }

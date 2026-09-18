@@ -26,6 +26,9 @@ reference once the corresponding subsystem is familiar.
 
 ## Chapter 3: Scenes and Core Systems
 
+- [Engine Foundations](/Documentation/Engine_Foundations.md) — C++ script hot reload,
+  scene and prefab saving, asset browsing, logging, and standalone game packaging.
+
 - [Objects and Components](/Documentation/Components.md) â€” object lifecycle,
   transforms, component ownership, physics, sprites, lights, and extension
   patterns.

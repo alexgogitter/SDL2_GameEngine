@@ -30,7 +30,7 @@ class Renderer3D
     void SetActiveCamera(Camera *camera) { activeCamera = camera; }
     Camera *GetActiveCamera() const { return activeCamera; }
 
-    ENGINE_API void SubmitMesh(const MeshRenderState &mesh, const glm::mat4 &worldMatrix, const glm::vec4 &colour, int objectLayer = 0);
+    ENGINE_API void SubmitMesh(const MeshRenderState &mesh, const glm::mat4 &worldMatrix, const glm::vec4 &colour, int objectLayer = 0, Shader *shader = nullptr);
 
     ENGINE_API void SubmitSelectionOutline(const MeshRenderState &mesh, const glm::mat4 &worldMatrix, const glm::vec4 &colour, float shellScale = 1.04f, int objectLayer = 0);
 
@@ -40,6 +40,7 @@ class Renderer3D
     struct RenderCommand
     {
         unsigned int vertexArray = 0;
+        Shader *shader = nullptr;
         std::size_t indexCount = 0;
         glm::mat4 worldMatrix = glm::mat4(1.0f);
         glm::vec4 colour = glm::vec4(1.0f);
@@ -48,6 +49,7 @@ class Renderer3D
     struct SelectionOutlineCommand
     {
         unsigned int vertexArray = 0;
+        Shader *shader = nullptr;
         std::size_t indexCount = 0;
         glm::mat4 worldMatrix = glm::mat4(1.0f);
         glm::vec4 colour = glm::vec4(1.0f);

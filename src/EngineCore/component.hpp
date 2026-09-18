@@ -16,6 +16,7 @@ class Component
 {
   private:
     bool created = false;
+    bool setup = false;
     bool enabled = true;
     std::string typeName;
 
@@ -23,6 +24,8 @@ class Component
     Object *parent = nullptr;
 
     virtual void OnCreate() {}
+    /// Called once before the first simulation update, after deserialization.
+    virtual void Setup() {}
     virtual void OnEnable() {}
     virtual void OnDisable() {}
     virtual void PreUpdate(std::uint64_t) {}
@@ -39,6 +42,8 @@ class Component
     virtual bool GetProperty(std::size_t, ComponentProperty &) { return false; }
 
     virtual void OnPropertyChanged(const char *) {}
+    virtual std::string CaptureState() const { return {}; }
+    virtual void RestoreState(const std::string &) {}
 
   public:
     ENGINE_API Component(const std::string &componentTypeName, Object *parentObject);
@@ -65,6 +70,9 @@ class Component
     ENGINE_API void notifyPropertyChanged(const char *key);
 
     ENGINE_API void notifyTransformChanged();
+    /// Optional structured state for components that cannot be represented by inspector fields.
+    ENGINE_API std::string captureState() const;
+    ENGINE_API void restoreState(const std::string &state);
 
     ENGINE_API const std::string &getTypeName() const;
 

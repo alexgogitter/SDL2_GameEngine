@@ -1,6 +1,7 @@
 #include "editorDockspace.hpp"
 
 #include <imgui.h>
+#include <initializer_list>
 #include <imgui_internal.h>
 
 void DrawEditorDockspace()
@@ -40,9 +41,20 @@ void DrawEditorDockspace()
         ImGui::DockBuilderDockWindow("Game View", centreDock);
 
         ImGui::DockBuilderDockWindow("Camera Outputs", bottomDock);
+        ImGui::DockBuilderDockWindow("Assets", bottomDock);
+        ImGui::DockBuilderDockWindow("Log", bottomDock);
 
         ImGui::DockBuilderFinish(dockspaceId);
     }
 
+    // Introduce new panels into an existing layout without resetting the user's arrangement.
+    if (auto *settings = ImGui::FindWindowSettingsByID(ImHashStr("Camera Outputs"))) {
+        if (settings->DockId != 0) {
+            for (const char *panel : {"Assets", "Log"}) {
+                if (!ImGui::FindWindowSettingsByID(ImHashStr(panel)))
+                    ImGui::DockBuilderDockWindow(panel, settings->DockId);
+            }
+        }
+    }
     ImGui::DockSpaceOverViewport(dockspaceId, viewport, flags);
 }

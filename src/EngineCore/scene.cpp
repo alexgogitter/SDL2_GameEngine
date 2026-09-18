@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <vector>
+#include <stdexcept>
 
 struct Scene::Impl
 {
@@ -48,6 +49,25 @@ Scene::Scene(Resource_manager &resources, Renderer2D &renderer, Renderer3D &rend
 }
 
 Scene::~Scene() = default;
+
+void Scene::clear() { impl->rootObjects.clear(); }
+
+void Scene::swapContents(Scene &other)
+{
+    if (impl->resources != other.impl->resources || impl->renderer != other.impl->renderer || impl->renderer3D != other.impl->renderer3D)
+        throw std::invalid_argument("Scene services must match");
+    impl->rootObjects.swap(other.impl->rootObjects);
+}
+
+void Scene::appendContents(Scene &other)
+{
+    if (this == &other) return;
+    if (impl->resources != other.impl->resources || impl->renderer != other.impl->renderer || impl->renderer3D != other.impl->renderer3D)
+        throw std::invalid_argument("Scene services must match");
+    impl->rootObjects.reserve(impl->rootObjects.size() + other.impl->rootObjects.size());
+    for (auto &root : other.impl->rootObjects) impl->rootObjects.push_back(std::move(root));
+    other.impl->rootObjects.clear();
+}
 
 Object *Scene::createObject(const std::string &name, ObjectId requestedId)
 {

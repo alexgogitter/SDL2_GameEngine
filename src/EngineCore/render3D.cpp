@@ -50,13 +50,13 @@ void Renderer3D::SetViewportSize(float width, float height)
 
 bool Renderer3D::shouldRenderLayer(int objectLayer) const { return IsValidLayer(objectLayer) && (activeCamera == nullptr || activeCamera->rendersLayer(objectLayer)); }
 
-void Renderer3D::SubmitMesh(const MeshRenderState &mesh, const glm::mat4 &worldMatrix, const glm::vec4 &colour, int objectLayer)
+void Renderer3D::SubmitMesh(const MeshRenderState &mesh, const glm::mat4 &worldMatrix, const glm::vec4 &colour, int objectLayer, Shader *shader)
 {
     if (mesh.vertexArray == 0 || mesh.indexCount == 0 || !shouldRenderLayer(objectLayer)) {
         return;
     }
 
-    renderCommands.push_back({mesh.vertexArray, mesh.indexCount, worldMatrix, colour});
+    renderCommands.push_back({mesh.vertexArray, shader, mesh.indexCount, worldMatrix, colour});
 }
 
 void Renderer3D::SubmitSelectionOutline(const MeshRenderState &mesh, const glm::mat4 &worldMatrix, const glm::vec4 &colour, float shellScale, int objectLayer)
@@ -65,7 +65,7 @@ void Renderer3D::SubmitSelectionOutline(const MeshRenderState &mesh, const glm::
         return;
     }
 
-    selectionOutlineCommands.push_back({mesh.vertexArray, mesh.indexCount, worldMatrix, colour, std::max(shellScale, 1.001f)});
+    selectionOutlineCommands.push_back({mesh.vertexArray, nullptr, mesh.indexCount, worldMatrix, colour, std::max(shellScale, 1.001f)});
 }
 
 void Renderer3D::Render3D()
@@ -84,12 +84,20 @@ void Renderer3D::Render3D()
     glFrontFace(GL_CCW);
     glDisable(GL_BLEND);
 
-    meshShader->use();
-    meshShader->setMat4("uViewProjection", activeCamera->getViewProjectionMatrix());
-
     for (const RenderCommand &command : renderCommands) {
-        meshShader->setMat4("uModel", command.worldMatrix);
-        meshShader->setVec4("uColour", command.colour);
+
+        if (command.shader != nullptr && command.shader->isValid()) {
+            command.shader->use();
+            command.shader->setMat4("uViewProjection", activeCamera->getViewProjectionMatrix());
+            command.shader->setMat4("uModel", command.worldMatrix);
+            command.shader->setVec4("uColour", command.colour);
+        }
+        else {
+            meshShader->use();
+            meshShader->setMat4("uViewProjection", activeCamera->getViewProjectionMatrix());
+            meshShader->setMat4("uModel", command.worldMatrix);
+            meshShader->setVec4("uColour", command.colour);
+        }
         glBindVertexArray(command.vertexArray);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(command.indexCount), GL_UNSIGNED_INT, nullptr);
     }

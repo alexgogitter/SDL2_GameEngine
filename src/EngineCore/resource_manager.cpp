@@ -1,3 +1,4 @@
+#include <SDL.h>
 #include "resource_manager.hpp"
 
 #include <cstdio>
@@ -12,14 +13,14 @@ unsigned int loadTextureFromPath(const std::string &filePath, TextureColourSpace
 {
     SDL_Surface *loadedSurface = IMG_Load(filePath.c_str());
     if (loadedSurface == nullptr) {
-        std::fprintf(stderr, "ERROR: Unable to load %s: %s\n", filePath.c_str(), IMG_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: Unable to load %s: %s\n", filePath.c_str(), IMG_GetError());
         return 0;
     }
 
     SDL_Surface *surface = SDL_ConvertSurfaceFormat(loadedSurface, SDL_PIXELFORMAT_RGBA32, 0);
     SDL_FreeSurface(loadedSurface);
     if (surface == nullptr) {
-        std::fprintf(stderr, "ERROR: Unable to convert %s to RGBA32.\n", filePath.c_str());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: Unable to convert %s to RGBA32.\n", filePath.c_str());
         return 0;
     }
 
@@ -45,7 +46,7 @@ TTF_Font *loadFontFromPath(const std::string &filePath, int fontSize)
 {
     TTF_Font *font = TTF_OpenFont(filePath.c_str(), fontSize);
     if (font == nullptr) {
-        std::fprintf(stderr, "ERROR: Unable to load %s: %s\n", filePath.c_str(), TTF_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: Unable to load %s: %s\n", filePath.c_str(), TTF_GetError());
     }
     return font;
 }

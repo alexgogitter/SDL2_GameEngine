@@ -1,8 +1,12 @@
 #include "component.hpp"
+#include "logger.hpp"
+#include <exception>
 
 Component::Component(const std::string &componentTypeName, Object *parentObject) : typeName(componentTypeName), parent(parentObject) {}
 
 Component::~Component() = default;
+std::string Component::captureState() const { return CaptureState(); }
+void Component::restoreState(const std::string &state) { RestoreState(state); }
 
 const std::string &Component::getTypeName() const { return typeName; }
 
@@ -49,14 +53,30 @@ void Component::create()
 void Component::preUpdate(std::uint64_t deltaTime)
 {
     if (created && enabled) {
-        PreUpdate(deltaTime);
+        try {
+            if (!setup) {
+                Setup();
+                setup = true;
+            }
+            PreUpdate(deltaTime);
+        } catch (const std::exception &e) {
+            enabled = false;
+            Logger::write(LogLevel::Error, typeName, std::string("Setup/PreUpdate failed; component disabled: ") + e.what());
+        } catch (...) {
+            enabled = false;
+            Logger::write(LogLevel::Error, typeName, "Setup/PreUpdate failed; component disabled");
+        }
     }
 }
 
 void Component::update(std::uint64_t deltaTime)
 {
     if (created && enabled) {
-        Update(deltaTime);
+        try { Update(deltaTime); }
+        catch (const std::exception &e) {
+            enabled = false;
+            Logger::write(LogLevel::Error, typeName, std::string("Update failed; component disabled: ") + e.what());
+        } catch (...) { enabled = false; Logger::write(LogLevel::Error, typeName, "Update failed; component disabled"); }
     }
 }
 
@@ -77,8 +97,11 @@ void Component::destroy()
         OnDisable();
     }
 
-    OnDestroy();
+    try { OnDestroy(); }
+    catch (const std::exception &e) { Logger::write(LogLevel::Error, typeName, std::string("Destroy failed: ") + e.what()); }
+    catch (...) { Logger::write(LogLevel::Error, typeName, "Destroy failed"); }
     created = false;
+    setup = false;
 }
 
 void Component::draw2D(Renderer2D *renderer)

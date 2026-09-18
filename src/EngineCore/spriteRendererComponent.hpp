@@ -86,6 +86,12 @@ class SpriteRendererComponent : public Component
     const Material2D &getMaterial() const { return material; }
 
   private:
+    std::size_t GetPropertyCount() const override;
+    bool GetProperty(std::size_t index, ComponentProperty &property) override;
+    void OnPropertyChanged(const char *key) override;
+    std::string texturePaths[7];
+    TextureHandle observedHandles[7] = {InvalidTextureHandle, InvalidTextureHandle, InvalidTextureHandle,
+        InvalidTextureHandle, InvalidTextureHandle, InvalidTextureHandle, InvalidTextureHandle};
     void Update(std::uint64_t deltaTime) override;
     void Draw2D(Renderer2D *renderer) override;
     Material2DRenderState resolveMaterial() const;

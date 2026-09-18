@@ -1,0 +1,68 @@
+{
+  "format": "ricochet.prefab",
+  "object": {
+    "active": true,
+    "children": [],
+    "colour": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "components": [
+      {
+        "enabled": true,
+        "properties": {},
+        "state": "",
+        "type": "MeshFilter3D"
+      },
+      {
+        "enabled": true,
+        "properties": {
+          "colour": {
+            "type": 8,
+            "value": [
+              0.18000000715255737,
+              0.550000011920929,
+              0.949999988079071,
+              1.0
+            ]
+          }
+        },
+        "state": "",
+        "type": "MeshRenderer3D"
+      },
+      {
+        "enabled": true,
+        "properties": {
+          "degreesPerSecond": {
+            "type": 3,
+            "value": 45.0
+          }
+        },
+        "state": "",
+        "type": "SpinScript"
+      }
+    ],
+    "id": 2,
+    "layer": 0,
+    "name": "Spinning Cube",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "version": 1
+}

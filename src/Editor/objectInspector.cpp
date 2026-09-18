@@ -81,7 +81,9 @@ bool DrawBurgerButton(const char *id)
 }
 } // namespace
 
-bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistry &componentRegistry, const ComponentCreateContext &componentContext, bool structuralEditingAllowed)
+bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistry &componentRegistry,
+                         const ComponentCreateContext &componentContext, bool structuralEditingAllowed,
+                         const ScriptComponentActions *scriptActions)
 {
     bool anythingChanged = false;
 
@@ -177,6 +179,11 @@ bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistr
 
     ImGui::SeparatorText("Components");
 
+    static std::array<char, 128> componentSearch{};
+    static std::array<char, 128> newScriptName{"NewScript"};
+    static std::string componentAdditionMessage;
+    static bool componentAdditionFailed = false;
+
     std::string pendingRemovalType;
 
     for (std::size_t index = 0; index < object.getComponentCount(); ++index) {
@@ -264,6 +271,21 @@ bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistr
         }
 
         if (componentOpen) {
+            const char *category = componentRegistry.getCategory(component->getTypeName().c_str());
+
+            if (category != nullptr && std::string(category) == "User Scripts" && scriptActions != nullptr && scriptActions->editScript) {
+                if (ImGui::Button("Edit Script")) {
+                    std::string error;
+
+                    if (!scriptActions->editScript(component->getTypeName(), error)) {
+                        componentAdditionMessage = error;
+                        componentAdditionFailed = true;
+                    }
+                }
+
+                ImGui::Separator();
+            }
+
             if (component->getPropertyCount() == 0) {
                 ImGui::TextDisabled("No editable properties");
             }
@@ -286,12 +308,6 @@ bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistr
     }
 
     ImGui::Spacing();
-
-    static std::array<char, 128> componentSearch{};
-
-    static std::string componentAdditionMessage;
-
-    static bool componentAdditionFailed = false;
 
     std::string pendingAdditionType;
 
@@ -320,6 +336,27 @@ bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistr
         ImGui::InputTextWithHint("##ComponentSearch", "Search components...", componentSearch.data(), componentSearch.size());
 
         ImGui::Separator();
+
+        if (scriptActions != nullptr && scriptActions->createScript) {
+            ImGui::SeparatorText("User Scripts");
+            ImGui::TextDisabled("Create a script component from this viewer.");
+            ImGui::InputText("New script name", newScriptName.data(), newScriptName.size());
+
+            if (ImGui::Button("Create Script")) {
+                std::string error;
+
+                if (scriptActions->createScript(newScriptName.data(), error)) {
+                    componentAdditionMessage = "Created " + std::string(newScriptName.data()) + "; rebuilding scripts.";
+                    componentAdditionFailed = false;
+                }
+                else {
+                    componentAdditionMessage = error;
+                    componentAdditionFailed = true;
+                }
+            }
+
+            ImGui::Separator();
+        }
 
         std::vector<std::string> categories;
 
@@ -406,8 +443,6 @@ bool DrawObjectInspector(Object &object, LayerRegistry &layers, ComponentRegistr
 
     if (!pendingAdditionType.empty()) {
         Component *addedComponent = componentRegistry.createAndAttach(pendingAdditionType.c_str(), object, componentContext);
-
-        printf("Added component: %s\n", pendingAdditionType.c_str());
 
         if (addedComponent != nullptr) {
             const char *displayName = componentRegistry.getDisplayName(pendingAdditionType.c_str());

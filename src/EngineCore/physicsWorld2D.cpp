@@ -1,3 +1,6 @@
+#include <SDL.h>
+#include "logger.hpp"
+#include <sstream>
 #include "physicsWorld2D.hpp"
 
 #include <algorithm>
@@ -20,15 +23,15 @@ struct PhysicsWorld2D::PhysXState
         auto *physics = static_cast<physx::PxPhysics *>(physicsHandle);
 
         if (physics == nullptr) {
-            std::cerr << "[PhysX] Cannot create scene without "
-                         "a valid physics SDK.\n";
+            { std::ostringstream message; message << "[PhysX] Cannot create scene without "
+                         "a valid physics SDK.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
             return;
         }
 
         dispatcher = physx::PxDefaultCpuDispatcherCreate(2);
 
         if (dispatcher == nullptr) {
-            std::cerr << "[PhysX] Failed to create CPU dispatcher.\n";
+            { std::ostringstream message; message << "[PhysX] Failed to create CPU dispatcher.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
             return;
         }
 
@@ -41,20 +44,20 @@ struct PhysicsWorld2D::PhysXState
         sceneDescription.filterShader = physx::PxDefaultSimulationFilterShader;
 
         if (!sceneDescription.isValid()) {
-            std::cerr << "[PhysX] The 2D scene description is invalid.\n";
+            { std::ostringstream message; message << "[PhysX] The 2D scene description is invalid.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
             return;
         }
 
         scene = physics->createScene(sceneDescription);
 
         if (scene == nullptr) {
-            std::cerr << "[PhysX] Failed to create the 2D scene.\n";
+            { std::ostringstream message; message << "[PhysX] Failed to create the 2D scene.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
             return;
         }
 
         valid = true;
 
-        std::cout << "[PhysX] 2D simulation scene created.\n";
+        { std::ostringstream message; message << "[PhysX] 2D simulation scene created.\n"; Logger::write(LogLevel::Info, "Engine", message.str()); }
     }
 
     ~PhysXState()
@@ -73,7 +76,7 @@ struct PhysicsWorld2D::PhysXState
         }
 
         if (wasValid) {
-            std::cout << "[PhysX] 2D simulation scene destroyed.\n";
+            { std::ostringstream message; message << "[PhysX] 2D simulation scene destroyed.\n"; Logger::write(LogLevel::Info, "Engine", message.str()); }
         }
     }
 };

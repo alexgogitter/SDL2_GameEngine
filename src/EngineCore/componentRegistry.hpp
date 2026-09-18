@@ -29,6 +29,8 @@ class ComponentRegistry
   public:
     ENGINE_API ComponentRegistry();
     ENGINE_API ~ComponentRegistry();
+    /// Exchanges registered factories during a validated module reload.
+    ENGINE_API void swap(ComponentRegistry &other);
 
     ComponentRegistry(const ComponentRegistry &) = delete;
     ComponentRegistry &operator=(const ComponentRegistry &) = delete;

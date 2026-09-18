@@ -1,3 +1,6 @@
+#include <SDL.h>
+#include "logger.hpp"
+#include <sstream>
 #include "shader.hpp"
 
 #include <fstream>
@@ -18,7 +21,7 @@ bool Shader::loadFromFiles(const std::string &vertexPath, const std::string &fra
     std::ifstream vertexFile(vertexPath);
     std::ifstream fragmentFile(fragmentPath);
     if (!vertexFile || !fragmentFile) {
-        std::cerr << "ERROR: Unable to open shader files: " << vertexPath << " and " << fragmentPath << '\n';
+        { std::ostringstream message; message << "ERROR: Unable to open shader files: " << vertexPath << " and " << fragmentPath << '\n'; Logger::write(LogLevel::Error, "Engine", message.str()); }
         return false;
     }
 
@@ -49,7 +52,7 @@ bool Shader::loadFromSource(const std::string &vertexSource, const std::string &
     if (success != GL_TRUE) {
         char log[2048] = {};
         glGetProgramInfoLog(newProgram, sizeof(log), nullptr, log);
-        std::cerr << "ERROR: Shader program link failed:\n" << log << '\n';
+        { std::ostringstream message; message << "ERROR: Shader program link failed:\n" << log << '\n'; Logger::write(LogLevel::Error, "Engine", message.str()); }
         glDeleteProgram(newProgram);
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
@@ -93,7 +96,7 @@ unsigned int Shader::compileStage(unsigned int type, const std::string &source)
     if (success != GL_TRUE) {
         char log[2048] = {};
         glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-        std::cerr << "ERROR: " << (type == GL_VERTEX_SHADER ? "Vertex" : "Fragment") << " shader compilation failed:\n" << log << '\n';
+        { std::ostringstream message; message << "ERROR: " << (type == GL_VERTEX_SHADER ? "Vertex" : "Fragment") << " shader compilation failed:\n" << log << '\n'; Logger::write(LogLevel::Error, "Engine", message.str()); }
         glDeleteShader(shader);
         return 0;
     }

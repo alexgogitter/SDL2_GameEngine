@@ -1,3 +1,6 @@
+#include <nlohmann/json.hpp>
+#include <stdexcept>
+#include <SDL.h>
 #include "animationControllerComponent.hpp"
 
 #include <algorithm>
@@ -153,28 +156,28 @@ bool AnimationControllerComponent::loadTexturePackerAtlas(const std::string &xml
 
     const std::string xml = readWholeFile(xmlPath);
     if (xml.empty()) {
-        std::fprintf(stderr, "ERROR: Unable to read TexturePacker XML: %s\n", xmlPath.c_str());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: Unable to read TexturePacker XML: %s\n", xmlPath.c_str());
         return false;
     }
 
     const std::regex atlasPattern(R"(<TextureAtlas\b([^>]*)>)");
     std::smatch atlasMatch;
     if (!std::regex_search(xml, atlasMatch, atlasPattern)) {
-        std::fprintf(stderr, "ERROR: TexturePacker XML missing TextureAtlas root.\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: TexturePacker XML missing TextureAtlas root.\n");
         return false;
     }
 
     const auto atlasAttributes = parseAttributes(atlasMatch[1].str());
     const auto imagePathAttribute = atlasAttributes.find("imagePath");
     if (imagePathAttribute == atlasAttributes.end()) {
-        std::fprintf(stderr, "ERROR: TexturePacker XML missing imagePath.\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: TexturePacker XML missing imagePath.\n");
         return false;
     }
 
     const int atlasWidth = readIntAttribute(atlasAttributes, "width");
     const int atlasHeight = readIntAttribute(atlasAttributes, "height");
     if (atlasWidth <= 0 || atlasHeight <= 0) {
-        std::fprintf(stderr, "ERROR: TexturePacker XML has invalid atlas dimensions.\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: TexturePacker XML has invalid atlas dimensions.\n");
         return false;
     }
 
@@ -182,7 +185,7 @@ bool AnimationControllerComponent::loadTexturePackerAtlas(const std::string &xml
     const TextureHandle srgbAtlas = resources->loadTexture(imagePath.c_str(), TextureColourSpace::SRGB);
     const TextureHandle linearAtlas = resources->loadTexture(imagePath.c_str(), TextureColourSpace::Linear);
     if (srgbAtlas == InvalidTextureHandle || linearAtlas == InvalidTextureHandle) {
-        std::fprintf(stderr, "ERROR: Unable to load TexturePacker atlas image: %s\n", imagePath.c_str());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: Unable to load TexturePacker atlas image: %s\n", imagePath.c_str());
         return false;
     }
 
@@ -196,13 +199,13 @@ bool AnimationControllerComponent::loadTexturePackerAtlas(const std::string &xml
         }
 
         if ((hasAttribute(attributes, "r") && attributes.at("r") == "y") || hasAttribute(attributes, "vertices") || hasAttribute(attributes, "triangles")) {
-            std::fprintf(stderr, "ERROR: TexturePacker sprite %s uses rotation/polygon packing; v1 supports rectangles only.\n", nameAttribute->second.c_str());
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: TexturePacker sprite %s uses rotation/polygon packing; v1 supports rectangles only.\n", nameAttribute->second.c_str());
             return false;
         }
 
         ParsedSprite parsed;
         if (!parseSpriteName(nameAttribute->second, parsed.prefix, parsed.frameNumber, parsed.angle)) {
-            std::fprintf(stderr, "WARNING: Ignoring TexturePacker sprite with unsupported name: %s\n", nameAttribute->second.c_str());
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "WARNING: Ignoring TexturePacker sprite with unsupported name: %s\n", nameAttribute->second.c_str());
             continue;
         }
 
@@ -225,7 +228,7 @@ bool AnimationControllerComponent::loadTexturePackerAtlas(const std::string &xml
         for (auto &framePair : anglePair.second) {
             const PartialFrame &partial = framePair.second;
             if (!partial.hasAlbedo) {
-                std::fprintf(stderr, "WARNING: Skipping animation frame %d for %s because Image map is missing.\n", framePair.first, clip.name.c_str());
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "WARNING: Skipping animation frame %d for %s because Image map is missing.\n", framePair.first, clip.name.c_str());
                 continue;
             }
 
@@ -256,10 +259,13 @@ bool AnimationControllerComponent::loadTexturePackerAtlas(const std::string &xml
     }
 
     if (compiledClipCount == 0) {
-        std::fprintf(stderr, "ERROR: TexturePacker atlas produced no animation clips.\n");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "ERROR: TexturePacker atlas produced no animation clips.\n");
         return false;
     }
 
+    auto source = std::find_if(atlasSources.begin(), atlasSources.end(), [&](const AtlasSource &entry) { return entry.path == xmlPath && entry.prefix == clipBaseName; });
+    if (source == atlasSources.end()) atlasSources.push_back({xmlPath, clipBaseName, fps, loop});
+    else *source = {xmlPath, clipBaseName, fps, loop};
     if (currentState.empty()) {
         setDefaultState(clips.begin()->first);
     }
@@ -422,4 +428,34 @@ const AnimationControllerComponent::AnimationClip *AnimationControllerComponent:
 {
     const auto found = clips.find(currentState);
     return found != clips.end() ? &found->second : nullptr;
+}
+
+std::string AnimationControllerComponent::CaptureState() const
+{
+    nlohmann::json sources = nlohmann::json::array();
+    for (const auto &s : atlasSources) sources.push_back({{"path",s.path},{"prefix",s.prefix},{"fps",s.fps},{"loop",s.loop}});
+    return nlohmann::json{{"atlases",sources},{"transitions",transitions},{"anyTransitions",anyTransitions},
+        {"currentState",currentState},{"frame",currentFrameIndex},{"elapsed",frameAccumulatorSeconds}}.dump();
+}
+void AnimationControllerComponent::RestoreState(const std::string &text)
+{
+    const auto data = nlohmann::json::parse(text);
+    clips.clear(); atlasSources.clear(); transitions.clear(); anyTransitions.clear(); queuedEvents.clear(); currentState.clear();
+    for (const auto &s : data.at("atlases")) {
+        if (!loadTexturePackerAtlas(s.at("path"),s.at("prefix"),s.at("fps"),s.at("loop")))
+            throw std::runtime_error("Cannot restore animation atlas: " + s.at("path").get<std::string>());
+    }
+    const auto restoredTransitions = data.at("transitions").get<std::map<std::string, std::map<std::string,std::string>>>();
+    for (const auto &from : restoredTransitions) for (const auto &event : from.second)
+        if (!addTransition(from.first,event.first,event.second)) throw std::runtime_error("Invalid animation transition");
+    for (const auto &event : data.at("anyTransitions").get<std::map<std::string,std::string>>())
+        if (!addAnyTransition(event.first,event.second)) throw std::runtime_error("Invalid animation transition");
+    const auto state = data.at("currentState").get<std::string>();
+    if (!state.empty()) {
+        if (!play(state)) throw std::runtime_error("Invalid animation state: " + state);
+        currentFrameIndex = std::min(data.at("frame").get<std::size_t>(), getCurrentClip()->frames.size()-1);
+        frameAccumulatorSeconds = data.at("elapsed").get<float>();
+        if (!std::isfinite(frameAccumulatorSeconds) || frameAccumulatorSeconds < 0) frameAccumulatorSeconds = 0;
+        applyCurrentFrame();
+    }
 }

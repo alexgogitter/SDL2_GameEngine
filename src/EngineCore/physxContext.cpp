@@ -1,3 +1,6 @@
+#include <SDL.h>
+#include "logger.hpp"
+#include <sstream>
 #include "physxContext.hpp"
 
 #include <iostream>
@@ -10,7 +13,7 @@ namespace
 class PhysXErrorCallback final : public physx::PxErrorCallback
 {
   public:
-    void reportError(physx::PxErrorCode::Enum code, const char *message, const char *file, int line) override { std::cerr << "[PhysX] Error " << static_cast<int>(code) << " at " << file << ':' << line << ": " << message << '\n'; }
+    void reportError(physx::PxErrorCode::Enum code, const char *message, const char *file, int line) override { { std::ostringstream diagnostic; diagnostic << "[PhysX] Error " << static_cast<int>(code) << " at " << file << ':' << line << ": " << message << '\n'; Logger::write(LogLevel::Error, "Engine", diagnostic.str()); } }
 };
 } // namespace
 
@@ -30,7 +33,7 @@ struct PhysXContext::Impl
         foundation = PxCreateFoundation(PX_PHYSICS_VERSION, allocator, errorCallback);
 
         if (foundation == nullptr) {
-            std::cerr << "[PhysX] Failed to create the foundation.\n";
+            { std::ostringstream diagnostic; diagnostic << "[PhysX] Failed to create the foundation.\n"; Logger::write(LogLevel::Error, "Engine", diagnostic.str()); }
             return;
         }
 
@@ -39,20 +42,20 @@ struct PhysXContext::Impl
         physics = PxCreatePhysics(PX_PHYSICS_VERSION, *foundation, scale, true, nullptr);
 
         if (physics == nullptr) {
-            std::cerr << "[PhysX] Failed to create the physics SDK.\n";
+            { std::ostringstream diagnostic; diagnostic << "[PhysX] Failed to create the physics SDK.\n"; Logger::write(LogLevel::Error, "Engine", diagnostic.str()); }
             return;
         }
 
         extensionsInitialised = PxInitExtensions(*physics, nullptr);
 
         if (!extensionsInitialised) {
-            std::cerr << "[PhysX] Failed to initialise extensions.\n";
+            { std::ostringstream diagnostic; diagnostic << "[PhysX] Failed to initialise extensions.\n"; Logger::write(LogLevel::Error, "Engine", diagnostic.str()); }
             return;
         }
 
         valid = true;
 
-        std::cout << "[PhysX] Startup complete. Version " << PX_PHYSICS_VERSION_MAJOR << '.' << PX_PHYSICS_VERSION_MINOR << '.' << PX_PHYSICS_VERSION_BUGFIX << '\n';
+        { std::ostringstream diagnostic; diagnostic << "[PhysX] Startup complete. Version " << PX_PHYSICS_VERSION_MAJOR << '.' << PX_PHYSICS_VERSION_MINOR << '.' << PX_PHYSICS_VERSION_BUGFIX << '\n'; Logger::write(LogLevel::Info, "Engine", diagnostic.str()); }
     }
 
     ~Impl()
@@ -73,7 +76,7 @@ struct PhysXContext::Impl
         }
 
         if (valid) {
-            std::cout << "[PhysX] Shutdown complete.\n";
+            { std::ostringstream diagnostic; diagnostic << "[PhysX] Shutdown complete.\n"; Logger::write(LogLevel::Info, "Engine", diagnostic.str()); }
         }
 
         valid = false;

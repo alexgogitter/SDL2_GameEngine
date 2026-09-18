@@ -1,3 +1,6 @@
+#include <SDL.h>
+#include "logger.hpp"
+#include <sstream>
 #include "physicsWorld3D.hpp"
 
 #include <algorithm>
@@ -21,8 +24,8 @@ struct PhysicsWorld3D::Impl
     explicit Impl(void *physicsHandle) : physics(static_cast<physx::PxPhysics *>(physicsHandle))
     {
         if (physics == nullptr) {
-            std::cerr << "[PhysX] Cannot create the 3D "
-                         "world without a valid SDK.\n";
+            { std::ostringstream message; message << "[PhysX] Cannot create the 3D "
+                         "world without a valid SDK.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
 
             return;
         }
@@ -30,8 +33,8 @@ struct PhysicsWorld3D::Impl
         dispatcher = physx::PxDefaultCpuDispatcherCreate(2);
 
         if (dispatcher == nullptr) {
-            std::cerr << "[PhysX] Failed to create the "
-                         "3D CPU dispatcher.\n";
+            { std::ostringstream message; message << "[PhysX] Failed to create the "
+                         "3D CPU dispatcher.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
 
             return;
         }
@@ -51,8 +54,8 @@ struct PhysicsWorld3D::Impl
         description.flags |= physx::PxSceneFlag::eENABLE_CCD;
 
         if (!description.isValid()) {
-            std::cerr << "[PhysX] Invalid 3D scene "
-                         "description.\n";
+            { std::ostringstream message; message << "[PhysX] Invalid 3D scene "
+                         "description.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
 
             return;
         }
@@ -60,16 +63,16 @@ struct PhysicsWorld3D::Impl
         scene = physics->createScene(description);
 
         if (scene == nullptr) {
-            std::cerr << "[PhysX] Failed to create the "
-                         "3D simulation scene.\n";
+            { std::ostringstream message; message << "[PhysX] Failed to create the "
+                         "3D simulation scene.\n"; Logger::write(LogLevel::Error, "Engine", message.str()); }
 
             return;
         }
 
         valid = true;
 
-        std::cout << "[PhysX] 3D simulation scene "
-                     "created.\n";
+        { std::ostringstream message; message << "[PhysX] 3D simulation scene "
+                     "created.\n"; Logger::write(LogLevel::Info, "Engine", message.str()); }
     }
 
     ~Impl()
@@ -90,8 +93,8 @@ struct PhysicsWorld3D::Impl
         physics = nullptr;
 
         if (wasValid) {
-            std::cout << "[PhysX] 3D simulation scene "
-                         "destroyed.\n";
+            { std::ostringstream message; message << "[PhysX] 3D simulation scene "
+                         "destroyed.\n"; Logger::write(LogLevel::Info, "Engine", message.str()); }
         }
     }
 };

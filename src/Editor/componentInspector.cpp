@@ -7,6 +7,8 @@
 #include <imgui.h>
 
 #include <string>
+#include <vector>
+#include <cstring>
 
 namespace
 {
@@ -109,9 +111,16 @@ bool DrawProperty(ComponentProperty &property)
     }
 
     case ComponentPropertyType::String: {
-        const auto *value = static_cast<std::string *>(property.value);
-
-        ImGui::Text("%s: %s", label, value->c_str());
+        auto *value = static_cast<std::string *>(property.value);
+        std::vector<char> buffer((std::max)(std::size_t(4096), value->size() + 1024), 0);
+        std::memcpy(buffer.data(), value->data(), value->size());
+        if (ImGui::InputText(label, buffer.data(), buffer.size())) { *value = buffer.data(); changed = true; }
+        if (!property.readOnly && ImGui::BeginDragDropTarget()) {
+            if (const auto *payload = ImGui::AcceptDragDropPayload("ASSET_PATH")) {
+                *value = static_cast<const char *>(payload->Data); changed = true;
+            }
+            ImGui::EndDragDropTarget();
+        }
         break;
     }
     }

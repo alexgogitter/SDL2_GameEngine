@@ -18,7 +18,12 @@ Made by Matthew Bannister and Alex Riddell.
 - object/component composition
 - OpenGL-rendered ImGui interface
 
-Shadows and 3D mesh rendering are planned but not yet implemented. See the
+The editor also supports scene/prefab persistence, an asset browser, C++ script
+hot reload, file-backed logs, and standalone game packaging. See
+[Engine Foundations](/Documentation/Engine_Foundations.md) for the workflow.
+
+Built-in cube mesh rendering and PhysX 3D physics are available. Shadows and
+external model import remain planned. See the
 [current status](/Documentation/Current_Status.md) for precise feature boundaries.
 
 ## Build
@@ -56,6 +61,18 @@ Run:
 
 The current Makefile targets the MSYS2 UCRT64 MinGW toolchain on Windows.
 
+## Build a shareable game
+
+Save your scene under `res/` and set `startupScene` in `game.json`, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\package_game.ps1
+```
+
+The complete game is staged in `dist/Game/Release/`; share
+`dist/Game-windows-x64.zip`. User scripts live in `scripts/`; press F7 in the
+editor to rebuild them and read diagnostics in the Log window.
+
 ## Documentation
 
 Start with the [documentation index](/Documentation/Index.md).
@@ -76,6 +93,9 @@ return, ownership, unit, and lifecycle documentation while editing C++.
 ```text
 src/EngineCore/  runtime engine C++ source and public headers
 src/Editor/      editor UI, tools, and editor entry point
+src/Player/      standalone game entry point
+scripts/         user C++ gameplay module
+tests/           engine foundation integration tests
 res/             runtime textures, fonts, maps, and GLSL shaders
 external/        GLAD, GLM, ImGui, and Box2D dependencies
 Documentation/   maintained engine manual
